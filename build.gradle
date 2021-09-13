@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.5.10'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.10'
+}
+
+gradlePlugin {
+    plugins {
+        publisher {
+            id = 'artifact-publisher'
+            implementationClass = 'com.likethesalad.tools.artifact.publisher.ArtifactPublisherPlugin'
+        }
+    }
+    automatedPublishing = false
+}
+
+println "Lel: ${project.extensions.sourceSets.getClass()}"
+

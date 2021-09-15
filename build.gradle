@@ -28,6 +28,3 @@ gradlePlugin {
     }
     automatedPublishing = false
 }
-
-println "Lel: ${project.extensions.sourceSets.getClass()}"
-

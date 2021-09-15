@@ -10,10 +10,12 @@ version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
     api 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
+    api "io.github.gradle-nexus:publish-plugin:1.1.0"
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.10'
 }
 

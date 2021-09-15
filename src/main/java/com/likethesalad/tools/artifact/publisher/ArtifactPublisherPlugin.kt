@@ -1,6 +1,7 @@
 package com.likethesalad.tools.artifact.publisher
 
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
+import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.PluginContainer
@@ -20,13 +21,21 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         verifyRootProject(project)
+        applyRootProjectPlugins(project.plugins)
         extension = project.extensions.create("artifactPublisher", ArtifactPublisherExtension::class.java)
-        applyPlugins(project.plugins)
+
+        project.subprojects { subProject ->
+            configureSubproject(subProject)
+        }
+    }
+
+    private fun configureSubproject(project: Project) {
+        applySubprojectPlugins(project.plugins)
         val mainPublication = createMainMavenPublication(project)
         signPublication(project, mainPublication)
     }
 
-    fun verifyRootProject(project: Project) {
+    private fun verifyRootProject(project: Project) {
         if (project != project.rootProject) {
             throw IllegalStateException("This plugin can only be applied to the root project")
         }
@@ -94,9 +103,13 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         return project.extensions.getByType(SourceSetContainer::class.java)
     }
 
-    private fun applyPlugins(plugins: PluginContainer) {
+    private fun applySubprojectPlugins(plugins: PluginContainer) {
         plugins.apply(MavenPublishPlugin::class.java)
         plugins.apply(SigningPlugin::class.java)
         plugins.apply(DokkaPlugin::class.java)
+    }
+
+    private fun applyRootProjectPlugins(plugins: PluginContainer) {
+        plugins.apply(NexusPublishPlugin::class.java)
     }
 }

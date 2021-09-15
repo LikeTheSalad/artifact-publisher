@@ -10,6 +10,7 @@ import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.jvm.tasks.Jar
+import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
 
@@ -20,17 +21,19 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         extension = project.extensions.create("artifactPublisher", ArtifactPublisherExtension::class.java)
         applyPlugins(project.plugins)
-        configureMavenPublication(project)
+        val mainPublication = createMainMavenPublication(project)
+        signPublication(project, mainPublication)
     }
 
-    private fun configureMavenPublication(project: Project) {
+    private fun createMainMavenPublication(project: Project): MavenPublication {
         val publishing = project.extensions.getByType(PublishingExtension::class.java)
-        publishing.publications.create("main", MavenPublication::class.java) { publication ->
+
+        return publishing.publications.create("main", MavenPublication::class.java) { publication ->
             publication.groupId = extension.group.get()
             publication.version = extension.version.get()
 
             publication.artifact(getSourcesJarTask(project))
-            //todo add javadoc artifact
+            publication.artifact(getJavadocJarTask(project))
             publication.from(project.components.getByName("java"))
 
             publication.pom {
@@ -58,6 +61,18 @@ class ArtifactPublisherPlugin : Plugin<Project> {
                     issueManagement.url.set(extension.issueTrackerUrl)
                 }
             }
+        }
+    }
+
+    private fun signPublication(project: Project, publication: MavenPublication) {
+        val signing = project.extensions.getByType(SigningExtension::class.java)
+        signing.sign(publication)
+    }
+
+    private fun getJavadocJarTask(project: Project): TaskProvider<Jar> {
+        return project.tasks.register("javadocJar", Jar::class.java) {
+            it.from(project.tasks.named("dokkaHtml"))
+            it.archiveClassifier.set("javadoc")
         }
     }
 

@@ -19,10 +19,17 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     private lateinit var extension: ArtifactPublisherExtension
 
     override fun apply(project: Project) {
+        verifyRootProject(project)
         extension = project.extensions.create("artifactPublisher", ArtifactPublisherExtension::class.java)
         applyPlugins(project.plugins)
         val mainPublication = createMainMavenPublication(project)
         signPublication(project, mainPublication)
+    }
+
+    fun verifyRootProject(project: Project) {
+        if (project != project.rootProject) {
+            throw IllegalStateException("This plugin can only be applied to the root project")
+        }
     }
 
     private fun createMainMavenPublication(project: Project): MavenPublication {

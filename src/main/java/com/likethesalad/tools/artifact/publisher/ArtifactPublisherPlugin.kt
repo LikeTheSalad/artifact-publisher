@@ -33,8 +33,22 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun configureSubproject(project: Project) {
         applySubprojectPlugins(project.plugins)
-        val mainPublication = createMainMavenPublication(project)
-        signPublication(project, mainPublication)
+        val plugins = project.plugins
+        val publishing = project.extensions.getByType(PublishingExtension::class.java)
+
+        // For Java libraries
+        plugins.withId("java-library") {
+            val mainPublication = createJarMavenPublication(project, publishing)
+            signPublication(project, mainPublication)
+        }
+
+        // For Android libraries
+        plugins.withId("com.android.library") {
+            project.afterEvaluate {
+                val mainPublication = createAarMavenPublication(project, publishing)
+                signPublication(project, mainPublication)
+            }
+        }
     }
 
     private fun verifyRootProject(project: Project) {
@@ -43,42 +57,21 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
     }
 
-    private fun createMainMavenPublication(project: Project): MavenPublication {
-        val publishing = project.extensions.getByType(PublishingExtension::class.java)
-
+    private fun createAarMavenPublication(project: Project, publishing: PublishingExtension): MavenPublication {
         return publishing.publications.create("main", MavenPublication::class.java) { publication ->
-            publication.groupId = extension.group.get()
-            publication.version = extension.version.get()
+            publication.artifact(getAndroidSourcesJarTask(project))
+            publication.from(project.components.getByName("release"))
 
-            publication.artifact(getSourcesJarTask(project))
+            configureCommonPublicationParams(project, publication)
+        }
+    }
+
+    private fun createJarMavenPublication(project: Project, publishing: PublishingExtension): MavenPublication {
+        return publishing.publications.create("main", MavenPublication::class.java) { publication ->
             publication.artifact(getJavadocJarTask(project))
             publication.from(project.components.getByName("java"))
 
-            publication.pom {
-                it.name.set(extension.displayName)
-                it.description.set(extension.description)
-                it.url.set(extension.url)
-                it.licenses { licenses ->
-                    licenses.license { license ->
-                        license.name.set("MIT License")
-                        license.url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-                it.developers { developers ->
-                    developers.developer { developer ->
-                        developer.id.set("LikeTheSalad")
-                        developer.name.set("Cesar Munoz")
-                        developer.email.set("likethesalad@gmail.com")
-                    }
-                }
-                it.scm { scm ->
-                    scm.url.set(extension.url)
-                    scm.connection.set(extension.vcsUrl)
-                }
-                it.issueManagement { issueManagement ->
-                    issueManagement.url.set(extension.issueTrackerUrl)
-                }
-            }
+            configureCommonPublicationParams(project, publication)
         }
     }
 
@@ -94,6 +87,13 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
     }
 
+    private fun getAndroidSourcesJarTask(project: Project): TaskProvider<Jar> {
+        return project.tasks.register("sourcesJar", Jar::class.java) {
+            it.from(getSourceSets(project).getByName("main").allSource) // todo get android sources
+            it.archiveClassifier.set("sources")
+        }
+    }
+
     private fun getSourcesJarTask(project: Project): TaskProvider<Jar> {
         return project.tasks.register("sourcesJar", Jar::class.java) {
             it.from(getSourceSets(project).getByName("main").allSource)
@@ -103,6 +103,39 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun getSourceSets(project: Project): SourceSetContainer {
         return project.extensions.getByType(SourceSetContainer::class.java)
+    }
+
+    private fun configureCommonPublicationParams(project: Project, publication: MavenPublication) {
+        publication.artifact(getSourcesJarTask(project))
+
+        publication.groupId = extension.group.get()
+        publication.version = extension.version.get()
+
+        publication.pom {
+            it.name.set(extension.displayName)
+            it.description.set(extension.description)
+            it.url.set(extension.url)
+            it.licenses { licenses ->
+                licenses.license { license ->
+                    license.name.set("MIT License")
+                    license.url.set("https://opensource.org/licenses/MIT")
+                }
+            }
+            it.developers { developers ->
+                developers.developer { developer ->
+                    developer.id.set("LikeTheSalad")
+                    developer.name.set("Cesar Munoz")
+                    developer.email.set("likethesalad@gmail.com")
+                }
+            }
+            it.scm { scm ->
+                scm.url.set(extension.url)
+                scm.connection.set(extension.vcsUrl)
+            }
+            it.issueManagement { issueManagement ->
+                issueManagement.url.set(extension.issueTrackerUrl)
+            }
+        }
     }
 
     private fun applySubprojectPlugins(plugins: PluginContainer) {

@@ -27,6 +27,8 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         project.subprojects { subProject ->
             configureSubproject(subProject)
         }
+
+        createPublishToMavenCentralTask(project)
     }
 
     private fun configureSubproject(project: Project) {
@@ -111,5 +113,24 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun applyRootProjectPlugins(plugins: PluginContainer) {
         plugins.apply(NexusPublishPlugin::class.java)
+    }
+
+    private fun createPublishToMavenCentralTask(project: Project) {
+        val tasks = project.tasks
+        val finishReleaseTask = tasks.named("closeAndReleaseSonatypeStagingRepository")
+
+        project.subprojects { subProject ->
+            subProject.tasks.configureEach {
+                if (it.name == "publishToSonatype") {
+                    finishReleaseTask.configure { releaseTask ->
+                        releaseTask.dependsOn(it)
+                    }
+                }
+            }
+        }
+
+        tasks.register("publishToMavenCentral") {
+            it.dependsOn(finishReleaseTask)
+        }
     }
 }

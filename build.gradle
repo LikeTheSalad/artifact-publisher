@@ -4,8 +4,8 @@ plugins {
     id 'maven-publish'
 }
 
-group 'org.example'
-version '1.0-SNAPSHOT'
+group 'com.likethesalad.tools'
+version '1.0.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -26,4 +26,15 @@ gradlePlugin {
         }
     }
     automatedPublishing = false
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            version = project.version
+
+            from components.java
+        }
+    }
 }

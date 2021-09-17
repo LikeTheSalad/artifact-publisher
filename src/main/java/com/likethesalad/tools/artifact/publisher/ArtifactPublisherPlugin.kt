@@ -14,6 +14,8 @@ import org.gradle.jvm.tasks.Jar
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
+import java.lang.invoke.MethodHandles
+import java.lang.invoke.MethodType
 
 class ArtifactPublisherPlugin : Plugin<Project> {
 
@@ -89,7 +91,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun getAndroidSourcesJarTask(project: Project): TaskProvider<Jar> {
         return project.tasks.register("sourcesJar", Jar::class.java) {
-            it.from(getSourceSets(project).getByName("main").allSource) // todo get android sources
+            it.from(getAndroidSourceSets(project).getByName("main").java.srcDirs)
             it.archiveClassifier.set("sources")
         }
     }
@@ -103,6 +105,13 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun getSourceSets(project: Project): SourceSetContainer {
         return project.extensions.getByType(SourceSetContainer::class.java)
+    }
+
+    private fun getAndroidSourceSets(project: Project): SourceSetContainer {
+        val androidExtension = project.extensions.getByName("android")
+        val type = MethodType.methodType(SourceSetContainer::class.java)
+        val handler = MethodHandles.lookup().findVirtual(androidExtension.javaClass, "getSourceSets()", type)
+        return handler.invoke() as SourceSetContainer
     }
 
     private fun configureCommonPublicationParams(project: Project, publication: MavenPublication) {

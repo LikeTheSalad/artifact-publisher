@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.likethesalad.tools'
-version '1.0.0-SNAPSHOT20'
+version '1.0.0-SNAPSHOT28'
 
 repositories {
     mavenCentral()

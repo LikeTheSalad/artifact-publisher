@@ -2,6 +2,7 @@ package com.likethesalad.tools.artifact.publisher
 
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.tools.AndroidSourceSetsHelper
+import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -30,7 +31,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             configureSubproject(subProject)
         }
 
-        createPublishToMavenCentralTask(project)
+        configurePublishing(project)
     }
 
     private fun configureSubproject(project: Project) {
@@ -155,15 +156,24 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         plugins.apply(NexusPublishPlugin::class.java)
     }
 
-    private fun createPublishToMavenCentralTask(project: Project) {
+    private fun configurePublishing(project: Project) {
+        val nexusPublishingExtension = project.extensions.getByType(NexusPublishExtension::class.java)
+        nexusPublishingExtension.repositories {
+            it.sonatype()
+        }
+        createPublishingTask(project)
+    }
+
+    private fun createPublishingTask(project: Project) {
         val tasks = project.tasks
-        val finishReleaseTask = tasks.named("closeAndReleaseStagingRepository")
+        val finishReleaseTask = tasks.named("closeAndReleaseSonatypeStagingRepository")
+        val closeTask = tasks.named("closeSonatypeStagingRepository")
 
         project.subprojects { subProject ->
-            subProject.tasks.configureEach {
-                if (it.name == "publishToSonatype") {
-                    finishReleaseTask.configure { releaseTask ->
-                        releaseTask.dependsOn(it)
+            subProject.tasks.configureEach { subProjectTask ->
+                if (subProjectTask.name == "publishToSonatype") {
+                    closeTask.configure {
+                        it.dependsOn(subProjectTask)
                     }
                 }
             }

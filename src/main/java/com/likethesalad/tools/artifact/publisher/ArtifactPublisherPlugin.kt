@@ -1,6 +1,7 @@
 package com.likethesalad.tools.artifact.publisher
 
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
+import com.likethesalad.tools.artifact.publisher.tools.AndroidSourceSetsHelper
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -14,8 +15,7 @@ import org.gradle.jvm.tasks.Jar
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
+import java.io.File
 
 class ArtifactPublisherPlugin : Plugin<Project> {
 
@@ -70,7 +70,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun createJarMavenPublication(project: Project, publishing: PublishingExtension): MavenPublication {
         return publishing.publications.create("main", MavenPublication::class.java) { publication ->
-            publication.artifact(getJavadocJarTask(project))
+            publication.artifact(getSourcesJarTask(project))
             publication.from(project.components.getByName("java"))
 
             configureCommonPublicationParams(project, publication)
@@ -90,8 +90,8 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     }
 
     private fun getAndroidSourcesJarTask(project: Project): TaskProvider<Jar> {
-        return project.tasks.register("sourcesJar", Jar::class.java) {
-            it.from(getAndroidSourceSets(project).getByName("main").java.srcDirs)
+        return project.tasks.register("androidSourcesJar", Jar::class.java) {
+            it.from(getAndroidSourceSets(project))
             it.archiveClassifier.set("sources")
         }
     }
@@ -107,15 +107,13 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         return project.extensions.getByType(SourceSetContainer::class.java)
     }
 
-    private fun getAndroidSourceSets(project: Project): SourceSetContainer {
-        val androidExtension = project.extensions.getByName("android")
-        val type = MethodType.methodType(SourceSetContainer::class.java)
-        val handler = MethodHandles.lookup().findVirtual(androidExtension.javaClass, "getSourceSets()", type)
-        return handler.invoke() as SourceSetContainer
+    private fun getAndroidSourceSets(project: Project): Set<File> {
+        val kotlinExtension = project.extensions.getByName("kotlin")
+        return AndroidSourceSetsHelper.getAndroidSourceSets(kotlinExtension)
     }
 
     private fun configureCommonPublicationParams(project: Project, publication: MavenPublication) {
-        publication.artifact(getSourcesJarTask(project))
+        publication.artifact(getJavadocJarTask(project))
 
         publication.groupId = extension.group.get()
         publication.version = extension.version.get()
@@ -159,7 +157,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun createPublishToMavenCentralTask(project: Project) {
         val tasks = project.tasks
-        val finishReleaseTask = tasks.named("closeAndReleaseSonatypeStagingRepository")
+        val finishReleaseTask = tasks.named("closeAndReleaseStagingRepository")
 
         project.subprojects { subProject ->
             subProject.tasks.configureEach {

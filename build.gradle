@@ -2,12 +2,13 @@ plugins {
     id 'java-gradle-plugin'
     id 'org.jetbrains.kotlin.jvm' version '1.5.10'
     id 'maven-publish'
+    id 'signing'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
 }
-apply from: "javaUpload.gradle"
 
-group 'com.likethesalad.tools'
-version '1.0.0'
+group = 'com.likethesalad.tools'
+version = '1.0.0'
+description = "Plugin that sets up android and java libraries mavenCentral publishing configurations"
 
 repositories {
     mavenCentral()
@@ -43,4 +44,69 @@ nexusPublishing {
     repositories {
         sonatype()
     }
+}
+
+ext {
+    publicName = "Artifact Publisher"
+    url = "https://github.com/LikeTheSalad/artifact-publisher"
+    vcsUrl = "https://github.com/LikeTheSalad/artifact-publisher.git"
+    issueTrackerUrl = "https://github.com/LikeTheSalad/artifact-publisher/issues"
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc.destinationDir
+    classifier 'javadoc'
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            version = project.version
+
+            artifact sourcesJar
+            artifact javadocJar
+            from components.java
+
+            pom {
+                name = project.publicName
+                description = project.description
+                url = project.url
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'LikeTheSalad'
+                        name = 'Cesar Munoz'
+                        email = 'likethesalad@gmail.com'
+                    }
+                }
+                scm {
+                    url = project.url
+                    connection = project.vcsUrl
+                }
+                issueManagement {
+                    url = project.issueTrackerUrl
+                }
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
 }

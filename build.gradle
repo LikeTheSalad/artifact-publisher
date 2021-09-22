@@ -2,10 +2,12 @@ plugins {
     id 'java-gradle-plugin'
     id 'org.jetbrains.kotlin.jvm' version '1.5.10'
     id 'maven-publish'
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
 }
+apply from: "javaUpload.gradle"
 
 group 'com.likethesalad.tools'
-version '1.0.0-SNAPSHOT31'
+version '1.0.0'
 
 repositories {
     mavenCentral()
@@ -37,13 +39,8 @@ gradlePlugin {
     automatedPublishing = false
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            version = project.version
-
-            from components.java
-        }
+nexusPublishing {
+    repositories {
+        sonatype()
     }
 }

@@ -5,17 +5,26 @@ plugins {
 }
 
 group 'com.likethesalad.tools'
-version '1.0.0-SNAPSHOT28'
+version '1.0.0-SNAPSHOT31'
 
 repositories {
     mavenCentral()
     gradlePluginPortal()
 }
 
+configurations {
+    fatDependency
+    compileOnly.extendsFrom(fatDependency)
+}
+
 dependencies {
     api 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
-    api "io.github.gradle-nexus:publish-plugin:1.1.0"
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.10'
+    fatDependency "io.github.gradle-nexus:publish-plugin:1.1.0"
+}
+
+jar {
+    from configurations.fatDependency.collect { zipTree(it) }
 }
 
 gradlePlugin {

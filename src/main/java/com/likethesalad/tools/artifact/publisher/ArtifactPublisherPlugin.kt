@@ -26,12 +26,19 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         verifyRootProject(project)
         applyRootProjectPlugins(project.plugins)
         extension = project.extensions.create("artifactPublisher", ArtifactPublisherExtension::class.java)
+        configureExtensionDefaults(project)
 
         project.subprojects { subProject ->
             configureSubproject(subProject)
         }
 
         configurePublishing(project)
+    }
+
+    private fun configureExtensionDefaults(project: Project) {
+        extension.description.set(project.provider { project.description })
+        extension.version.set(project.provider { project.version.toString() })
+        extension.group.set(project.provider { project.group.toString() })
     }
 
     private fun configureSubproject(project: Project) {

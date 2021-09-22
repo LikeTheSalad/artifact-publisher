@@ -1,13 +1,14 @@
 package com.likethesalad.tools.artifact.publisher.extensions
 
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
 
 open class ArtifactPublisherExtension(objectFactory: ObjectFactory) {
-    val displayName = objectFactory.property(String::class.java)
-    val description = objectFactory.property(String::class.java)
-    val group = objectFactory.property(String::class.java)
-    val version = objectFactory.property(String::class.java)
-    val url = objectFactory.property(String::class.java)
-    val vcsUrl = objectFactory.property(String::class.java)
-    val issueTrackerUrl = objectFactory.property(String::class.java)
+    val displayName: Property<String> = objectFactory.property(String::class.java)
+    val description: Property<String> = objectFactory.property(String::class.java)
+    val group: Property<String> = objectFactory.property(String::class.java)
+    val version: Property<String> = objectFactory.property(String::class.java)
+    val url: Property<String> = objectFactory.property(String::class.java)
+    val vcsUrl: Property<String> = objectFactory.property(String::class.java)
+    val issueTrackerUrl: Property<String> = objectFactory.property(String::class.java)
 }

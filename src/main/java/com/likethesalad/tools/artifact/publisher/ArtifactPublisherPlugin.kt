@@ -123,8 +123,8 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     private fun configureCommonPublicationParams(project: Project, publication: MavenPublication) {
         publication.artifact(getJavadocJarTask(project))
 
-        publication.groupId = extension.group.get()
-        publication.version = extension.version.get()
+        publication.groupId = getGroup()
+        publication.version = getVersion()
 
         publication.pom {
             it.name.set(extension.displayName)
@@ -151,6 +151,24 @@ class ArtifactPublisherPlugin : Plugin<Project> {
                 issueManagement.url.set(extension.issueTrackerUrl)
             }
         }
+    }
+
+    private fun getVersion(): String {
+        val version = extension.version.get()
+        if (version.isEmpty() || version == "unspecified") {
+            throw IllegalArgumentException("Version not set")
+        }
+
+        return version
+    }
+
+    private fun getGroup(): String {
+        val group = extension.group.get()
+        if (group.isEmpty()) {
+            throw IllegalArgumentException("Group not set")
+        }
+
+        return group
     }
 
     private fun applySubprojectPlugins(plugins: PluginContainer) {

@@ -46,26 +46,25 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     }
 
     private fun configureSubproject(project: Project) {
-        applySubprojectPlugins(project.plugins)
         val plugins = project.plugins
-        val publishing = project.extensions.getByType(PublishingExtension::class.java)
 
         // For Java libraries
         plugins.withId("java-library") {
-            configurePublishTarget(project, publishing, JarMavenPublicationCreator(extension))
+            configurePublishTarget(project, JarMavenPublicationCreator(extension))
         }
 
         // For Android libraries
         plugins.withId("com.android.library") {
-            configurePublishTarget(project, publishing, AarMavenPublicationCreator(extension))
+            configurePublishTarget(project, AarMavenPublicationCreator(extension))
         }
     }
 
     private fun configurePublishTarget(
         project: Project,
-        publishing: PublishingExtension,
         mavenPublicationCreator: MavenPublicationCreator
     ) {
+        applySubprojectPlugins(project.plugins)
+        val publishing = project.extensions.getByType(PublishingExtension::class.java)
         val targetExtension = project.extensions.create(
             EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
             ArtifactPublisherTargetExtension::class.java
@@ -113,7 +112,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         val closeTask = tasks.named("closeSonatypeStagingRepository")
 
         project.subprojects { subProject ->
-            subProject.tasks.configureEach { subProjectTask ->
+            subProject.tasks.whenTaskAdded { subProjectTask ->
                 if (subProjectTask.name == "publishToSonatype") {
                     closeTask.configure {
                         it.dependsOn(subProjectTask)

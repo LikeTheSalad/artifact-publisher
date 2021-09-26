@@ -49,17 +49,15 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         applySubprojectPlugins(project.plugins)
         val plugins = project.plugins
         val publishing = project.extensions.getByType(PublishingExtension::class.java)
-        val jarMavenPublicationCreator = JarMavenPublicationCreator(extension)
-        val aarMavenPublicationCreator = AarMavenPublicationCreator(extension)
 
         // For Java libraries
         plugins.withId("java-library") {
-            configurePublishTarget(project, publishing, jarMavenPublicationCreator)
+            configurePublishTarget(project, publishing, JarMavenPublicationCreator(extension))
         }
 
         // For Android libraries
         plugins.withId("com.android.library") {
-            configurePublishTarget(project, publishing, aarMavenPublicationCreator)
+            configurePublishTarget(project, publishing, AarMavenPublicationCreator(extension))
         }
     }
 

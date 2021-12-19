@@ -45,36 +45,42 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         extension.group.set(project.provider { project.group.toString() })
     }
 
-    private fun configureSubproject(project: Project) {
-        val plugins = project.plugins
+    private fun configureSubproject(subProject: Project) {
+        val plugins = subProject.plugins
 
         // For Java libraries
         plugins.withId("java-library") {
-            configurePublishTarget(project, JarMavenPublicationCreator(extension))
+            configurePublishTarget(subProject, JarMavenPublicationCreator(extension))
         }
 
         // For Android libraries
         plugins.withId("com.android.library") {
-            configurePublishTarget(project, AarMavenPublicationCreator(extension))
+            configurePublishTarget(subProject, AarMavenPublicationCreator(extension))
         }
     }
 
     private fun configurePublishTarget(
-        project: Project,
+        subProject: Project,
         mavenPublicationCreator: MavenPublicationCreator
     ) {
-        applySubprojectPlugins(project.plugins)
-        val publishing = project.extensions.getByType(PublishingExtension::class.java)
-        val targetExtension = project.extensions.create(
+        applySubprojectPlugins(subProject.plugins)
+        val publishing = subProject.extensions.getByType(PublishingExtension::class.java)
+        val targetExtension = subProject.extensions.create(
             EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
             ArtifactPublisherTargetExtension::class.java
         )
-        project.afterEvaluate {
+        subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
-                val mainPublication = mavenPublicationCreator.create(project, publishing)
-                signPublication(project, mainPublication)
+                setPropertiesFromRoot(subProject)
+                val mainPublication = mavenPublicationCreator.create(subProject, publishing)
+                signPublication(subProject, mainPublication)
             }
         }
+    }
+
+    private fun setPropertiesFromRoot(subProject: Project) {
+        subProject.version = subProject.rootProject.version
+        subProject.group = subProject.rootProject.group
     }
 
     private fun verifyRootProject(project: Project) {

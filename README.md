@@ -21,3 +21,8 @@ Command to publish:
 ```
 ./gradlew publishToMavenCentral
 ```
+
+For publishing the artifact-publisher:
+```
+./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+```

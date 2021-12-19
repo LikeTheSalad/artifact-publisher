@@ -71,16 +71,16 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         )
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
-                setPropertiesFromRoot(subProject)
+                setPropertiesFromExtension(subProject)
                 val mainPublication = mavenPublicationCreator.create(subProject, publishing)
                 signPublication(subProject, mainPublication)
             }
         }
     }
 
-    private fun setPropertiesFromRoot(subProject: Project) {
-        subProject.version = subProject.rootProject.version
-        subProject.group = subProject.rootProject.group
+    private fun setPropertiesFromExtension(subProject: Project) {
+        subProject.version = extension.version
+        subProject.group = extension.group
     }
 
     private fun verifyRootProject(project: Project) {

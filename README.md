@@ -17,12 +17,22 @@ artifactPublisher {
 }
 ```
 
+Target extension params:
+
+```groovy
+artifactPublisherTarget {
+    disablePublishing = false // defaults to false
+}
+```
+
 Command to publish:
+
 ```
 ./gradlew publishToMavenCentral
 ```
 
 For publishing the artifact-publisher:
+
 ```
 ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
 ```

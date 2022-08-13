@@ -10,7 +10,7 @@ import org.gradle.jvm.tasks.Jar
 abstract class MavenPublicationCreator(private val extension: ArtifactPublisherExtension) {
 
     fun create(project: Project, publishing: PublishingExtension): MavenPublication {
-        return publishing.publications.create("main", MavenPublication::class.java) { publication ->
+        return publishing.publications.create("likethesalad", MavenPublication::class.java) { publication ->
             publication.artifact(getSourcesJarTask(project))
             publication.from(project.components.getByName(getComponentName()))
 

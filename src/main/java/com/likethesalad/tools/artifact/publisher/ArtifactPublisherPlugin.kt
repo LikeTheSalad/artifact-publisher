@@ -119,7 +119,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
         project.subprojects { subProject ->
             subProject.tasks.whenTaskAdded { subProjectTask ->
-                if (subProjectTask.name == "publishMainPublicationToSonatypeRepository") {
+                if (subProjectTask.name == "publishLikethesaladPublicationToSonatypeRepository") {
                     closeTask.configure {
                         it.dependsOn(subProjectTask)
                     }

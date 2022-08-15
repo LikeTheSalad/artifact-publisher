@@ -32,9 +32,11 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     }
 
     private lateinit var extension: ArtifactPublisherExtension
+    private lateinit var rootProject: Project
 
     override fun apply(project: Project) {
         verifyRootProject(project)
+        this.rootProject = project
         applyRootProjectPlugins(project.plugins)
         extension = project.extensions.create(EXTENSION_ARTIFACT_PUBLISHER_NAME, ArtifactPublisherExtension::class.java)
         configureExtensionDefaults(project)
@@ -72,10 +74,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     ) {
         applySubprojectPlugins(subProject.plugins)
         val publishing = subProject.extensions.getByType(PublishingExtension::class.java)
-        val targetExtension = subProject.extensions.create(
-            EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
-            ArtifactPublisherTargetExtension::class.java
-        )
+        val targetExtension = createTargetExtensionIfNeeded(subProject)
         subProject.plugins.withId(GRADLE_PLUGIN_ID) {
             configureGradlePluginPublishing(subProject)
         }
@@ -91,12 +90,32 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
     }
 
+    private fun createTargetExtensionIfNeeded(subProject: Project): ArtifactPublisherTargetExtension {
+        val extensions = subProject.extensions
+        return extensions.findByName(EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME)?.let {
+            it as ArtifactPublisherTargetExtension
+        } ?: run {
+            extensions.create(
+                EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
+                ArtifactPublisherTargetExtension::class.java
+            )
+        }
+    }
+
     private fun isGradlePlugin(subProject: Project): Boolean {
         return subProject.plugins.hasPlugin(GRADLE_PLUGIN_ID)
     }
 
     private fun configureGradlePluginPublishing(subProject: Project) {
-        createEmbeddedIntransitiveConfiguration(subProject)
+        val intransitiveConfiguration = createEmbeddedIntransitiveConfiguration(subProject)
+        intransitiveConfiguration.allDependencies.whenObjectAdded {
+            if (it is ProjectDependency) {
+                val project = it.dependencyProject
+                val targetExtension = createTargetExtensionIfNeeded(project)
+                log("Disabling plugin publishing for ${project.name}")
+                targetExtension.disablePublishing.set(true)
+            }
+        }
         addGradlePluginPlugins(subProject.plugins)
     }
 
@@ -212,5 +231,9 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         tasks.register("publishToMavenCentral") {
             it.dependsOn(finishReleaseTask)
         }
+    }
+
+    private fun log(message: String) {
+        rootProject.logger.lifecycle(message)
     }
 }

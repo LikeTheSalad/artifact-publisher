@@ -22,6 +22,7 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.plugin.devel.tasks.PluginUnderTestMetadata
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
@@ -200,6 +201,19 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
         configurations.named("compileClasspath") {
             it.extendsFrom(classpath)
+        }
+        val testClasspath = configurations.create("testEmbeddedClasspath") {
+            it.isCanBeResolved = true
+            it.isCanBeConsumed = false
+            it.extendsFrom(bucket)
+        }
+
+        configurations.named("testRuntimeClasspath") {
+            it.extendsFrom(testClasspath)
+        }
+
+        subProject.tasks.withType(PluginUnderTestMetadata::class.java) {
+            it.pluginClasspath.from(testClasspath)
         }
 
         return classpath

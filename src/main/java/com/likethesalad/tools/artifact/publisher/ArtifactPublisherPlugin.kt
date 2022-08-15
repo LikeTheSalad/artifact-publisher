@@ -14,6 +14,7 @@ import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
@@ -133,29 +134,35 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         mainPublication: MavenPublication
     ) {
         val intransitiveClasspath = subProject.configurations.getByName(EMBEDDED_CLASSPATH_CONFIG_NAME)
-        appendPomDependencies(mainPublication, intransitiveClasspath)
-        appendPomDependenciesToGradlePublishing(publishing, intransitiveClasspath)
+        val extraDependencies = subProject.configurations.getByName("runtimeClasspath").allDependencies
+        appendPomDependencies(mainPublication, intransitiveClasspath, extraDependencies)
+        appendPomDependenciesToGradlePublishing(publishing, intransitiveClasspath, extraDependencies)
     }
 
     private fun appendPomDependenciesToGradlePublishing(
         publishing: PublishingExtension,
-        intransitiveClasspath: Configuration
+        intransitiveClasspath: Configuration,
+        extraDependencies: DependencySet
     ) {
         publishing.publications.whenObjectAdded { publication ->
             if (publication.name != "pluginMaven") {
                 return@whenObjectAdded
             }
             publication as MavenPublication
-            appendPomDependencies(publication, intransitiveClasspath)
+            appendPomDependencies(publication, intransitiveClasspath, extraDependencies)
         }
     }
 
     private fun appendPomDependencies(
         publication: MavenPublication,
-        intransitiveClasspath: Configuration
+        intransitiveClasspath: Configuration,
+        extraDependencies: DependencySet
     ) {
         publication.pom.withXml { xml ->
             val dependenciesAppender = DependenciesAppender(xml.asNode(), intransitiveClasspath.allDependencies)
+            extraDependencies.forEach {
+                dependenciesAppender.tryAddingDependency(it)
+            }
             intransitiveClasspath.allDependencies.forEach {
                 if (it is ProjectDependency) {
                     dependenciesAppender.addSubprojectDependencies(it.dependencyProject)

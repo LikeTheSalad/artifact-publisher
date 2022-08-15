@@ -4,13 +4,12 @@ import groovy.util.Node
 import groovy.util.NodeList
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.SelfResolvingDependency
 
 class DependenciesAppender(
     pomXml: Node,
-    private val embedded: DependencySet
+    private val embedded: Set<Dependency>
 ) {
     private val existingDependenciesId = mutableListOf<String>()
     private val dependencies: Node
@@ -23,7 +22,9 @@ class DependenciesAppender(
     init {
         val existingDependencies = pomXml.get("dependencies") as? NodeList
         dependencies =
-            if (existingDependencies != null) existingDependencies.first() as Node else pomXml.appendNode("dependencies") as Node
+            if (existingDependencies!!.isNotEmpty()) existingDependencies.first() as Node else pomXml.appendNode(
+                "dependencies"
+            ) as Node
         val deps = dependencies.get("dependency") as? NodeList
         deps?.forEach {
             val dependencyId = getDependencyId(it as Node)
@@ -33,9 +34,13 @@ class DependenciesAppender(
 
     fun addSubprojectDependencies(subProjectDependency: Project) {
         subProjectDependency.configurations.getByName("runtimeClasspath").allDependencies.forEach {
-            if (shouldAdd(it)) {
-                addDependency(it)
-            }
+            tryAddingDependency(it)
+        }
+    }
+
+    fun tryAddingDependency(dependency: Dependency) {
+        if (shouldAdd(dependency)) {
+            addDependency(dependency)
         }
     }
 

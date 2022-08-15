@@ -1,6 +1,7 @@
 package com.likethesalad.tools.artifact.publisher
 
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
@@ -115,6 +116,15 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             }
         }
         addGradlePluginPlugins(subProject.plugins)
+        configureShadowJar(subProject, intransitiveConfiguration)
+    }
+
+    private fun configureShadowJar(subProject: Project, intransitiveConfiguration: Configuration) {
+        subProject.tasks.withType(ShadowJar::class.java) { shadowJar ->
+            shadowJar.archiveClassifier.set("")
+            shadowJar.configurations = listOf(intransitiveConfiguration)
+            shadowJar.relocate("dagger", "${subProject.group}.dagger")
+        }
     }
 
     private fun configureFatPom(

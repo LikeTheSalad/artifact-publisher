@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'com.likethesalad.tools'
-version = '1.2.0'
+version = '1.2.1'
 description = "Plugin that sets up android and java libraries mavenCentral publishing configurations"
 
 repositories {

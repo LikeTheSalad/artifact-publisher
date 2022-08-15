@@ -2,6 +2,7 @@ package com.likethesalad.tools.artifact.publisher
 
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.gradle.publish.PluginBundleExtension
 import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
@@ -17,11 +18,13 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
 import org.gradle.plugin.devel.tasks.PluginUnderTestMetadata
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
@@ -129,7 +132,24 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             }
         }
         addGradlePluginPlugins(subProject.plugins)
+        configurePluginBundle(subProject.extensions)
+        configureGradlePluginExtension(subProject.extensions)
         configureShadowJar(subProject, intransitiveConfiguration)
+    }
+
+    private fun configurePluginBundle(extensions: ExtensionContainer) {
+        val pluginBundle = extensions.getByType(PluginBundleExtension::class.java)
+        pluginBundle.website = extension.url.get()
+        pluginBundle.vcsUrl = extension.vcsUrl.get()
+        pluginBundle.description = rootProject.description
+        pluginBundle.tags = extension.tags.get()
+    }
+
+    private fun configureGradlePluginExtension(extensions: ExtensionContainer) {
+        val gradlePluginExtension = extensions.getByType(GradlePluginDevelopmentExtension::class.java)
+        gradlePluginExtension.plugins.whenObjectAdded {
+            it.displayName = extension.displayName.get()
+        }
     }
 
     private fun configureShadowJar(subProject: Project, intransitiveConfiguration: Configuration) {

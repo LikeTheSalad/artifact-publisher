@@ -5,6 +5,7 @@ import groovy.util.NodeList
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.SelfResolvingDependency
 
 class DependenciesAppender(
@@ -42,7 +43,7 @@ class DependenciesAppender(
         if (dependency in embedded) {
             return false
         }
-        if (dependency is SelfResolvingDependency) {
+        if (dependency is SelfResolvingDependency && dependency !is ProjectDependency) {
             return false
         }
         val id = getDependencyId(dependency)

@@ -1,14 +1,19 @@
 package com.likethesalad.tools.artifact.publisher
 
+import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
+import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
+import com.likethesalad.tools.artifact.publisher.tools.DependenciesAppender
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -22,6 +27,8 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     companion object {
         private const val EXTENSION_ARTIFACT_PUBLISHER_NAME = "artifactPublisher"
         private const val EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME = "artifactPublisherTarget"
+        private const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
+        private const val EMBEDDED_CLASSPATH_CONFIG_NAME = "embeddedClasspath"
     }
 
     private lateinit var extension: ArtifactPublisherExtension
@@ -69,18 +76,93 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
             ArtifactPublisherTargetExtension::class.java
         )
+        subProject.plugins.withId(GRADLE_PLUGIN_ID) {
+            configureGradlePluginPublishing(subProject)
+        }
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
                 setPropertiesFromExtension(subProject)
                 val mainPublication = mavenPublicationCreator.create(subProject, publishing)
                 signPublication(subProject, mainPublication)
+                if (isGradlePlugin(subProject)) {
+                    configureFatPom(subProject, publishing, mainPublication)
+                }
             }
         }
     }
 
+    private fun isGradlePlugin(subProject: Project): Boolean {
+        return subProject.plugins.hasPlugin(GRADLE_PLUGIN_ID)
+    }
+
+    private fun configureGradlePluginPublishing(subProject: Project) {
+        createEmbeddedIntransitiveConfiguration(subProject)
+        addGradlePluginPlugins(subProject.plugins)
+    }
+
+    private fun configureFatPom(
+        subProject: Project,
+        publishing: PublishingExtension,
+        mainPublication: MavenPublication
+    ) {
+        val intransitiveClasspath = subProject.configurations.getByName(EMBEDDED_CLASSPATH_CONFIG_NAME)
+        appendPomDependencies(mainPublication, intransitiveClasspath)
+        appendPomDependenciesToGradlePublishing(publishing, intransitiveClasspath)
+    }
+
+    private fun appendPomDependenciesToGradlePublishing(
+        publishing: PublishingExtension,
+        intransitiveClasspath: Configuration
+    ) {
+        publishing.publications.whenObjectAdded { publication ->
+            if (publication.name != "pluginMaven") {
+                return@whenObjectAdded
+            }
+            publication as MavenPublication
+            appendPomDependencies(publication, intransitiveClasspath)
+        }
+    }
+
+    private fun appendPomDependencies(
+        publication: MavenPublication,
+        intransitiveClasspath: Configuration
+    ) {
+        publication.pom.withXml { xml ->
+            val dependenciesAppender = DependenciesAppender(xml.asNode(), intransitiveClasspath.allDependencies)
+            intransitiveClasspath.allDependencies.forEach {
+                if (it is ProjectDependency) {
+                    dependenciesAppender.addSubprojectDependencies(it.dependencyProject)
+                }
+            }
+        }
+    }
+
+    private fun addGradlePluginPlugins(plugins: PluginContainer) {
+        plugins.apply(ShadowPlugin::class.java)
+        plugins.apply(PublishPlugin::class.java)
+    }
+
+    private fun createEmbeddedIntransitiveConfiguration(subProject: Project): Configuration {
+        val configurations = subProject.configurations
+        val bucket = configurations.create("embedded")
+        bucket.isCanBeConsumed = false
+        bucket.isCanBeResolved = false
+        val classpath = configurations.create(EMBEDDED_CLASSPATH_CONFIG_NAME) {
+            it.isCanBeConsumed = false
+            it.isCanBeResolved = true
+            it.isTransitive = false
+            it.extendsFrom(bucket)
+        }
+        configurations.named("compileClasspath") {
+            it.extendsFrom(classpath)
+        }
+
+        return classpath
+    }
+
     private fun setPropertiesFromExtension(subProject: Project) {
-        subProject.version = extension.version
-        subProject.group = extension.group
+        subProject.version = extension.version.get()
+        subProject.group = extension.group.get()
     }
 
     private fun verifyRootProject(project: Project) {

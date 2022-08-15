@@ -94,12 +94,10 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         val extensions = subProject.extensions
         return extensions.findByName(EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME)?.let {
             it as ArtifactPublisherTargetExtension
-        } ?: run {
-            extensions.create(
-                EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
-                ArtifactPublisherTargetExtension::class.java
-            )
-        }
+        } ?: extensions.create(
+            EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
+            ArtifactPublisherTargetExtension::class.java
+        )
     }
 
     private fun isGradlePlugin(subProject: Project): Boolean {

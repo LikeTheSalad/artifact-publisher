@@ -13,6 +13,7 @@ import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
@@ -20,6 +21,7 @@ import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
@@ -83,13 +85,22 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
-                val mainPublication = mavenPublicationCreator.create(subProject, publishing)
+                val isGradlePlugin = isGradlePlugin(subProject)
+                val jarTask = getJarTask(subProject, isGradlePlugin)
+                val mainPublication = mavenPublicationCreator.create(subProject, publishing, jarTask)
                 signPublication(subProject, mainPublication)
-                if (isGradlePlugin(subProject)) {
+                if (isGradlePlugin) {
                     configureFatPom(subProject, publishing, mainPublication)
                 }
             }
         }
+    }
+
+    private fun getJarTask(subProject: Project, isGradlePlugin: Boolean): TaskProvider<Task>? {
+        if (!isGradlePlugin) {
+            return null
+        }
+        return subProject.tasks.named("shadowJar")
     }
 
     private fun createTargetExtensionIfNeeded(subProject: Project): ArtifactPublisherTargetExtension {

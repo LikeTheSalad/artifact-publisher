@@ -2,6 +2,7 @@ package com.likethesalad.tools.artifact.publisher.publications
 
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.TaskProvider
@@ -9,10 +10,15 @@ import org.gradle.jvm.tasks.Jar
 
 abstract class MavenPublicationCreator(private val extension: ArtifactPublisherExtension) {
 
-    fun create(project: Project, publishing: PublishingExtension): MavenPublication {
+    fun create(project: Project, publishing: PublishingExtension, jarTask: TaskProvider<Task>?): MavenPublication {
         return publishing.publications.create("likethesalad", MavenPublication::class.java) { publication ->
             publication.artifact(getSourcesJarTask(project))
-            publication.from(project.components.getByName(getComponentName()))
+
+            if (jarTask == null) {
+                publication.from(project.components.getByName(getComponentName()))
+            } else {
+                publication.artifact(jarTask)
+            }
 
             configureCommonPublicationParams(project, publication)
         }

@@ -9,21 +9,17 @@ import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTar
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
-import com.likethesalad.tools.artifact.publisher.tools.DependenciesAppender
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
 import org.gradle.plugin.devel.tasks.PluginUnderTestMetadata
 import org.gradle.plugins.signing.SigningExtension
@@ -90,21 +86,10 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
                 val isGradlePlugin = isGradlePlugin(subProject)
-                val jarTask = getJarTask(subProject, isGradlePlugin)
-                val mainPublication = mavenPublicationCreator.create(subProject, publishing, jarTask)
+                val mainPublication = mavenPublicationCreator.create(subProject, publishing, !isGradlePlugin)
                 signPublication(subProject, mainPublication)
-                if (isGradlePlugin) {
-                    configureFatPom(subProject, publishing, mainPublication)
-                }
             }
         }
-    }
-
-    private fun getJarTask(subProject: Project, isGradlePlugin: Boolean): TaskProvider<Task>? {
-        if (!isGradlePlugin) {
-            return null
-        }
-        return subProject.tasks.named("shadowJar")
     }
 
     private fun createTargetExtensionIfNeeded(subProject: Project): ArtifactPublisherTargetExtension {
@@ -125,9 +110,14 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         val intransitiveConfiguration = createEmbeddedIntransitiveConfiguration(subProject)
         intransitiveConfiguration.allDependencies.whenObjectAdded {
             if (it is ProjectDependency) {
-                val project = it.dependencyProject
-                val targetExtension = createTargetExtensionIfNeeded(project)
-                log("Disabling plugin publishing for ${project.name}")
+                val embeddedProject = it.dependencyProject
+                embeddedProject.afterEvaluate {
+                    embeddedProject.configurations.getByName("implementation").allDependencies.forEach { dep ->
+                        subProject.dependencies.add("implementation", dep)
+                    }
+                }
+                val targetExtension = createTargetExtensionIfNeeded(embeddedProject)
+                log("Disabling plugin publishing for ${embeddedProject.name}")
                 targetExtension.disablePublishing.set(true)
             }
         }
@@ -135,6 +125,12 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         configurePluginBundle(subProject.extensions)
         configureGradlePluginExtension(subProject.extensions)
         configureShadowJar(subProject, intransitiveConfiguration)
+        configureShadowElements(subProject)
+    }
+
+    private fun configureShadowElements(subProject: Project) {
+        subProject.configurations.getByName("shadowRuntimeElements")
+            .extendsFrom(subProject.configurations.getByName("runtimeElements"))
     }
 
     private fun configurePluginBundle(extensions: ExtensionContainer) {
@@ -157,49 +153,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             shadowJar.archiveClassifier.set("")
             shadowJar.configurations = listOf(intransitiveConfiguration)
             shadowJar.relocate("dagger", "${subProject.group}.dagger")
-        }
-    }
-
-    private fun configureFatPom(
-        subProject: Project,
-        publishing: PublishingExtension,
-        mainPublication: MavenPublication
-    ) {
-        val intransitiveClasspath = subProject.configurations.getByName(EMBEDDED_CLASSPATH_CONFIG_NAME)
-        val extraDependencies = subProject.configurations.getByName("runtimeClasspath").allDependencies
-        appendPomDependencies(mainPublication, intransitiveClasspath, extraDependencies)
-        appendPomDependenciesToGradlePublishing(publishing, intransitiveClasspath, extraDependencies)
-    }
-
-    private fun appendPomDependenciesToGradlePublishing(
-        publishing: PublishingExtension,
-        intransitiveClasspath: Configuration,
-        extraDependencies: DependencySet
-    ) {
-        publishing.publications.whenObjectAdded { publication ->
-            if (publication.name != "pluginMaven") {
-                return@whenObjectAdded
-            }
-            publication as MavenPublication
-            appendPomDependencies(publication, intransitiveClasspath, extraDependencies)
-        }
-    }
-
-    private fun appendPomDependencies(
-        publication: MavenPublication,
-        intransitiveClasspath: Configuration,
-        extraDependencies: DependencySet
-    ) {
-        publication.pom.withXml { xml ->
-            val dependenciesAppender = DependenciesAppender(xml.asNode(), intransitiveClasspath.allDependencies)
-            extraDependencies.forEach {
-                dependenciesAppender.tryAddingDependency(it)
-            }
-            intransitiveClasspath.allDependencies.forEach {
-                if (it is ProjectDependency) {
-                    dependenciesAppender.addSubprojectDependencies(it.dependencyProject)
-                }
-            }
         }
     }
 

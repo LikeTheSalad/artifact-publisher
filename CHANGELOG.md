@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+Version 1.2.2 *(27-8-2022)*
+---
+
+* Adding embedded dependencies to java component
+
 Version 1.2.1 *(15-8-2022)*
 ---
 

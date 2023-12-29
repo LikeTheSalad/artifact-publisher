@@ -4,11 +4,12 @@ plugins {
     id 'maven-publish'
     id 'signing'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+    id 'com.gradle.plugin-publish' version '1.2.1'
 }
 
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-description = "Plugin that sets up android and java libraries mavenCentral publishing configurations"
+description = "Internal plugin for publishing LikeTheSalad Java and Android libs"
 
 repositories {
     mavenCentral()
@@ -35,7 +36,7 @@ tasks.withType(KotlinCompile).all {
 dependencies {
     api 'org.jetbrains.dokka:dokka-gradle-plugin:1.8.10'
     implementation 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
-    implementation 'com.gradle.publish:plugin-publish-plugin:1.0.0'
+    implementation 'com.gradle.publish:plugin-publish-plugin:1.2.1'
     compileOnly "com.android.tools.build:gradle:7.4.0"
     fatDependency "io.github.gradle-nexus:publish-plugin:1.1.0"
 }
@@ -47,11 +48,13 @@ jar {
 gradlePlugin {
     plugins {
         publisher {
-            id = 'artifact-publisher'
+            id = 'com.likethesalad.artifact-publisher'
+            displayName = 'Artifact publisher'
+            description = project.description
+            tags.set(['publisher', "likethesalad"])
             implementationClass = 'com.likethesalad.tools.artifact.publisher.ArtifactPublisherPlugin'
         }
     }
-    automatedPublishing = false
 }
 
 nexusPublishing {
@@ -76,12 +79,7 @@ java {
 
 publishing {
     publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            version = project.version
-
-            from components.java
-
+        pluginMaven(MavenPublication) {
             pom {
                 name = project.publicName
                 description = project.description
@@ -109,8 +107,4 @@ publishing {
             }
         }
     }
-}
-
-signing {
-    sign publishing.publications.maven
 }

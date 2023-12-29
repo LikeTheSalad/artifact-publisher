@@ -80,8 +80,6 @@ publishing {
             groupId = project.group
             version = project.version
 
-            artifact sourcesJar
-            artifact javadocJar
             from components.java
 
             pom {

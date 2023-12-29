@@ -3,7 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.21'
     id 'maven-publish'
     id 'signing'
-    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
     id 'com.gradle.plugin-publish' version '1.2.1'
 }
 
@@ -17,12 +16,7 @@ repositories {
     google()
 }
 
-configurations {
-    fatDependency
-    compileOnly.extendsFrom(fatDependency)
-}
-
-def javaVersion = JavaVersion.VERSION_1_8
+def javaVersion = JavaVersion.VERSION_11
 def minKotlinVersion = "1.6"
 
 tasks.withType(KotlinCompile).all {
@@ -37,37 +31,22 @@ dependencies {
     api 'org.jetbrains.dokka:dokka-gradle-plugin:1.8.10'
     implementation 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
     implementation 'com.gradle.publish:plugin-publish-plugin:1.2.1'
+    implementation "io.github.gradle-nexus:publish-plugin:1.1.0"
     compileOnly "com.android.tools.build:gradle:7.4.0"
-    fatDependency "io.github.gradle-nexus:publish-plugin:1.1.0"
-}
-
-jar {
-    from configurations.fatDependency.collect { zipTree(it) }
 }
 
 gradlePlugin {
+    website.set("https://github.com/LikeTheSalad/artifact-publisher")
+    vcsUrl.set("https://github.com/LikeTheSalad/artifact-publisher.git")
     plugins {
         publisher {
             id = 'com.likethesalad.artifact-publisher'
-            displayName = 'Artifact publisher'
+            displayName = 'Artifact Publisher'
             description = project.description
             tags.set(['publisher', "likethesalad"])
             implementationClass = 'com.likethesalad.tools.artifact.publisher.ArtifactPublisherPlugin'
         }
     }
-}
-
-nexusPublishing {
-    repositories {
-        sonatype()
-    }
-}
-
-ext {
-    publicName = "Artifact Publisher"
-    url = "https://github.com/LikeTheSalad/artifact-publisher"
-    vcsUrl = "https://github.com/LikeTheSalad/artifact-publisher.git"
-    issueTrackerUrl = "https://github.com/LikeTheSalad/artifact-publisher/issues"
 }
 
 java {

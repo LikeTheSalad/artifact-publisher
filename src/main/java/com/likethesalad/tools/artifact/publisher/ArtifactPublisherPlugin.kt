@@ -29,10 +29,10 @@ import org.jetbrains.dokka.gradle.DokkaPlugin
 class ArtifactPublisherPlugin : Plugin<Project> {
 
     companion object {
-        const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
         private const val EXTENSION_ARTIFACT_PUBLISHER_NAME = "artifactPublisher"
         private const val EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME = "artifactPublisherTarget"
         private const val EMBEDDED_CLASSPATH_CONFIG_NAME = "embeddedClasspath"
+        private const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
     }
 
     private lateinit var extension: ArtifactPublisherExtension
@@ -85,10 +85,11 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         setPropertiesFromExtension(subProject)
         val publishing = subProject.extensions.getByType(PublishingExtension::class.java)
         val targetExtension = createTargetExtensionIfNeeded(subProject)
-        plugins.withId(GRADLE_PLUGIN_ID) {
+        if (plugins.hasPlugin(GRADLE_PLUGIN_ID)) {
             configureGradlePluginPublishing(subProject)
+        } else {
+            mavenPublicationCreator.prepare(subProject, isRelease)
         }
-        mavenPublicationCreator.prepare(subProject, isRelease)
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
                 val mainPublication = mavenPublicationCreator.create(subProject, publishing)

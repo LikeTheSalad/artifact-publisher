@@ -29,9 +29,9 @@ import org.jetbrains.dokka.gradle.DokkaPlugin
 class ArtifactPublisherPlugin : Plugin<Project> {
 
     companion object {
+        const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
         private const val EXTENSION_ARTIFACT_PUBLISHER_NAME = "artifactPublisher"
         private const val EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME = "artifactPublisherTarget"
-        private const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
         private const val EMBEDDED_CLASSPATH_CONFIG_NAME = "embeddedClasspath"
     }
 

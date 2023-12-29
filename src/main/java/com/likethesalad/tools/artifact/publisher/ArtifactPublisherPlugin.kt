@@ -242,6 +242,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
 
         tasks.register("publishToMavenCentral") {
+            it.group = "publishing"
             it.dependsOn(finishReleaseTask)
         }
     }

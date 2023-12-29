@@ -85,11 +85,14 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
-                val isGradlePlugin = isGradlePlugin(subProject)
-                val mainPublication = mavenPublicationCreator.create(subProject, publishing, !isGradlePlugin)
+                val mainPublication = mavenPublicationCreator.create(subProject, publishing, isRelease(subProject))
                 signPublication(subProject, mainPublication)
             }
         }
+    }
+
+    private fun isRelease(project: Project): Boolean {
+        return project.findProperty("release")?.equals("true") ?: false
     }
 
     private fun createTargetExtensionIfNeeded(subProject: Project): ArtifactPublisherTargetExtension {
@@ -100,10 +103,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
             ArtifactPublisherTargetExtension::class.java
         )
-    }
-
-    private fun isGradlePlugin(subProject: Project): Boolean {
-        return subProject.plugins.hasPlugin(GRADLE_PLUGIN_ID)
     }
 
     private fun configureGradlePluginPublishing(subProject: Project) {

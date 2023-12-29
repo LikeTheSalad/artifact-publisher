@@ -76,35 +76,3 @@ java {
     withJavadocJar()
     withSourcesJar()
 }
-
-publishing {
-    publications {
-        pluginMaven(MavenPublication) {
-            pom {
-                name = project.publicName
-                description = project.description
-                url = project.url
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'LikeTheSalad'
-                        name = 'Cesar Munoz'
-                        email = 'likethesalad@gmail.com'
-                    }
-                }
-                scm {
-                    url = project.url
-                    connection = project.vcsUrl
-                }
-                issueManagement {
-                    url = project.issueTrackerUrl
-                }
-            }
-        }
-    }
-}

@@ -6,7 +6,7 @@ import org.gradle.api.Project
 
 class AarMavenPublicationCreator(extension: ArtifactPublisherExtension) : MavenPublicationCreator(extension) {
 
-    override fun onPrepare(project: Project, isRelease: Boolean) {
+    override fun prepare(project: Project, isRelease: Boolean) {
         project.extensions.configure(LibraryExtension::class.java) {
             it.publishing {
                 singleVariant(getComponentName()) {

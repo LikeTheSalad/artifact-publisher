@@ -7,16 +7,14 @@ import org.gradle.api.publish.maven.MavenPublication
 
 abstract class MavenPublicationCreator(private val extension: ArtifactPublisherExtension) {
 
-    fun create(project: Project, publishing: PublishingExtension, isRelease: Boolean): MavenPublication {
-        onPrepare(project, isRelease)
-
+    fun create(project: Project, publishing: PublishingExtension): MavenPublication {
         return publishing.publications.create("likethesalad", MavenPublication::class.java) { publication ->
             publication.from(project.components.getByName(getComponentName()))
             configureCommonPublicationParams(publication)
         }
     }
 
-    abstract fun onPrepare(project: Project, isRelease: Boolean)
+    abstract fun prepare(project: Project, isRelease: Boolean)
 
     abstract fun getComponentName(): String
 

@@ -83,9 +83,10 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         subProject.plugins.withId(GRADLE_PLUGIN_ID) {
             configureGradlePluginPublishing(subProject)
         }
+        mavenPublicationCreator.prepare(subProject, isRelease(subProject))
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
-                val mainPublication = mavenPublicationCreator.create(subProject, publishing, isRelease(subProject))
+                val mainPublication = mavenPublicationCreator.create(subProject, publishing)
                 signPublication(subProject, mainPublication)
             }
         }

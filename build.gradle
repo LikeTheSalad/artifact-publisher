@@ -1,114 +1,57 @@
 plugins {
     id 'java-gradle-plugin'
-    id 'org.jetbrains.kotlin.jvm' version '1.5.10'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.21'
     id 'maven-publish'
     id 'signing'
-    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+    id 'com.gradle.plugin-publish' version '1.2.1'
 }
 
-group = 'com.likethesalad.tools'
-version = '1.2.2'
-description = "Plugin that sets up android and java libraries mavenCentral publishing configurations"
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+description = "Internal plugin for publishing LikeTheSalad Java and Android libs"
 
 repositories {
     mavenCentral()
     gradlePluginPortal()
+    google()
 }
 
-configurations {
-    fatDependency
-    compileOnly.extendsFrom(fatDependency)
+def javaVersion = JavaVersion.VERSION_11
+def minKotlinVersion = "1.6"
+
+tasks.withType(KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = javaVersion.toString()
+        apiVersion = minKotlinVersion
+        languageVersion = minKotlinVersion
+    }
 }
 
 dependencies {
-    api 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.10'
+    api 'org.jetbrains.dokka:dokka-gradle-plugin:1.8.10'
     implementation 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
-    implementation 'com.gradle.publish:plugin-publish-plugin:1.0.0'
-    fatDependency "io.github.gradle-nexus:publish-plugin:1.1.0"
-}
-
-jar {
-    from configurations.fatDependency.collect { zipTree(it) }
+    implementation 'com.gradle.publish:plugin-publish-plugin:1.2.1'
+    implementation "io.github.gradle-nexus:publish-plugin:1.1.0"
+    compileOnly "com.android.tools.build:gradle:7.4.0"
 }
 
 gradlePlugin {
+    website.set("https://github.com/LikeTheSalad/artifact-publisher")
+    vcsUrl.set("https://github.com/LikeTheSalad/artifact-publisher.git")
     plugins {
         publisher {
-            id = 'artifact-publisher'
+            id = 'com.likethesalad.artifact-publisher'
+            displayName = 'Artifact Publisher'
+            description = project.description
+            tags.set(['publisher', "likethesalad"])
             implementationClass = 'com.likethesalad.tools.artifact.publisher.ArtifactPublisherPlugin'
         }
     }
-    automatedPublishing = false
 }
 
-nexusPublishing {
-    repositories {
-        sonatype()
-    }
-}
-
-ext {
-    publicName = "Artifact Publisher"
-    url = "https://github.com/LikeTheSalad/artifact-publisher"
-    vcsUrl = "https://github.com/LikeTheSalad/artifact-publisher.git"
-    issueTrackerUrl = "https://github.com/LikeTheSalad/artifact-publisher/issues"
-}
-
-task sourcesJar(type: Jar) {
-    from sourceSets.main.allSource
-    classifier 'sources'
-}
-
-task javadocJar(type: Jar) {
-    from javadoc.destinationDir
-    classifier 'javadoc'
-}
-
-artifacts {
-    archives sourcesJar
-    archives javadocJar
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            version = project.version
-
-            artifact sourcesJar
-            artifact javadocJar
-            from components.java
-
-            pom {
-                name = project.publicName
-                description = project.description
-                url = project.url
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'LikeTheSalad'
-                        name = 'Cesar Munoz'
-                        email = 'likethesalad@gmail.com'
-                    }
-                }
-                scm {
-                    url = project.url
-                    connection = project.vcsUrl
-                }
-                issueManagement {
-                    url = project.issueTrackerUrl
-                }
-            }
-        }
-    }
-}
-
-signing {
-    sign publishing.publications.maven
+java {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+    withJavadocJar()
+    withSourcesJar()
 }

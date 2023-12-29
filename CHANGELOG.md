@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+Version 2.0.0 *(29-12-2023)*
+---
+
+* Upgrading gradle
+* Upgrading AGP and using its new apis
+* Publishing to the Gradle Plugin portal
+
 Version 1.2.2 *(27-8-2022)*
 ---
 

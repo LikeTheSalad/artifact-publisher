@@ -1,4 +1,6 @@
-Private lib used to publish other libs of "com.android.library" and "java-library" types.
+Internal lib used to publish libs of "com.android.library" and "java-library" types.
+
+> NOTE: This is an internal tool configured for a single group id artifact.
 
 Extension params:
 
@@ -28,7 +30,7 @@ artifactPublisherTarget {
 Command to publish:
 
 ```
-./gradlew publishToMavenCentral
+./gradlew publishToMavenCentral -Prelease=true
 ```
 
 For publishing the artifact-publisher:

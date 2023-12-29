@@ -31,8 +31,8 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     companion object {
         private const val EXTENSION_ARTIFACT_PUBLISHER_NAME = "artifactPublisher"
         private const val EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME = "artifactPublisherTarget"
-        private const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
         private const val EMBEDDED_CLASSPATH_CONFIG_NAME = "embeddedClasspath"
+        private const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
     }
 
     private lateinit var extension: ArtifactPublisherExtension
@@ -76,20 +76,32 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         subProject: Project,
         mavenPublicationCreator: MavenPublicationCreator
     ) {
-        applySubprojectPlugins(subProject.plugins)
+        val plugins = subProject.plugins
+        applySubprojectPlugins(plugins)
+        val isRelease = isRelease(subProject)
+        if (isRelease) {
+            addSigningPlugin(plugins)
+        }
         setPropertiesFromExtension(subProject)
         val publishing = subProject.extensions.getByType(PublishingExtension::class.java)
         val targetExtension = createTargetExtensionIfNeeded(subProject)
-        subProject.plugins.withId(GRADLE_PLUGIN_ID) {
+        if (plugins.hasPlugin(GRADLE_PLUGIN_ID)) {
             configureGradlePluginPublishing(subProject)
+        } else {
+            mavenPublicationCreator.prepare(subProject, isRelease)
         }
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
-                val isGradlePlugin = isGradlePlugin(subProject)
-                val mainPublication = mavenPublicationCreator.create(subProject, publishing, !isGradlePlugin)
-                signPublication(subProject, mainPublication)
+                val mainPublication = mavenPublicationCreator.create(subProject, publishing)
+                if (isRelease) {
+                    signPublication(subProject, mainPublication)
+                }
             }
         }
+    }
+
+    private fun isRelease(project: Project): Boolean {
+        return project.findProperty("release")?.equals("true") ?: false
     }
 
     private fun createTargetExtensionIfNeeded(subProject: Project): ArtifactPublisherTargetExtension {
@@ -100,10 +112,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME,
             ArtifactPublisherTargetExtension::class.java
         )
-    }
-
-    private fun isGradlePlugin(subProject: Project): Boolean {
-        return subProject.plugins.hasPlugin(GRADLE_PLUGIN_ID)
     }
 
     private fun configureGradlePluginPublishing(subProject: Project) {
@@ -208,9 +216,12 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         signing.sign(publication)
     }
 
+    private fun addSigningPlugin(plugins: PluginContainer) {
+        plugins.apply(SigningPlugin::class.java)
+    }
+
     private fun applySubprojectPlugins(plugins: PluginContainer) {
         plugins.apply(MavenPublishPlugin::class.java)
-        plugins.apply(SigningPlugin::class.java)
         plugins.apply(DokkaPlugin::class.java)
     }
 
@@ -242,6 +253,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
 
         tasks.register("publishToMavenCentral") {
+            it.group = "publishing"
             it.dependsOn(finishReleaseTask)
         }
     }

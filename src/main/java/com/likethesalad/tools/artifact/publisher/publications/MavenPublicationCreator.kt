@@ -4,25 +4,19 @@ import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExt
 import org.gradle.api.Project
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.jvm.tasks.Jar
 
 abstract class MavenPublicationCreator(private val extension: ArtifactPublisherExtension) {
 
-    fun create(project: Project, publishing: PublishingExtension, addExtraArtifacts: Boolean): MavenPublication {
+    fun create(project: Project, publishing: PublishingExtension, isRelease: Boolean): MavenPublication {
+        onPrepare(project, isRelease)
+
         return publishing.publications.create("likethesalad", MavenPublication::class.java) { publication ->
             publication.from(project.components.getByName(getComponentName()))
-
-            if (addExtraArtifacts) {
-                publication.artifact(getSourcesJarTask(project))
-                publication.artifact(getJavadocJarTask(project))
-            }
-
             configureCommonPublicationParams(publication)
         }
     }
 
-    abstract fun getSourcesJarTask(project: Project): TaskProvider<Jar>
+    abstract fun onPrepare(project: Project, isRelease: Boolean)
 
     abstract fun getComponentName(): String
 
@@ -54,13 +48,6 @@ abstract class MavenPublicationCreator(private val extension: ArtifactPublisherE
             it.issueManagement { issueManagement ->
                 issueManagement.url.set(extension.issueTrackerUrl)
             }
-        }
-    }
-
-    private fun getJavadocJarTask(project: Project): TaskProvider<Jar> {
-        return project.tasks.register("javadocJar", Jar::class.java) {
-            it.from(project.tasks.named("dokkaHtml"))
-            it.archiveClassifier.set("javadoc")
         }
     }
 

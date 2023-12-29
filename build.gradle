@@ -1,6 +1,6 @@
 plugins {
     id 'java-gradle-plugin'
-    id 'org.jetbrains.kotlin.jvm' version '1.5.10'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.20'
     id 'maven-publish'
     id 'signing'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
@@ -11,6 +11,7 @@ description = "Plugin that sets up android and java libraries mavenCentral publi
 repositories {
     mavenCentral()
     gradlePluginPortal()
+    google()
 }
 
 configurations {
@@ -20,9 +21,9 @@ configurations {
 
 dependencies {
     api 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.10'
     implementation 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
     implementation 'com.gradle.publish:plugin-publish-plugin:1.0.0'
+    compileOnly "com.android.tools.build:gradle:7.4.0"
     fatDependency "io.github.gradle-nexus:publish-plugin:1.1.0"
 }
 
@@ -53,19 +54,9 @@ ext {
     issueTrackerUrl = "https://github.com/LikeTheSalad/artifact-publisher/issues"
 }
 
-task sourcesJar(type: Jar) {
-    from sourceSets.main.allSource
-    classifier 'sources'
-}
-
-task javadocJar(type: Jar) {
-    from javadoc.destinationDir
-    classifier 'javadoc'
-}
-
-artifacts {
-    archives sourcesJar
-    archives javadocJar
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
 
 publishing {

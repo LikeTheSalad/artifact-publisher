@@ -76,18 +76,25 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         subProject: Project,
         mavenPublicationCreator: MavenPublicationCreator
     ) {
-        applySubprojectPlugins(subProject.plugins)
+        val plugins = subProject.plugins
+        applySubprojectPlugins(plugins)
+        val isRelease = isRelease(subProject)
+        if (isRelease) {
+            addSigningPlugin(plugins)
+        }
         setPropertiesFromExtension(subProject)
         val publishing = subProject.extensions.getByType(PublishingExtension::class.java)
         val targetExtension = createTargetExtensionIfNeeded(subProject)
-        subProject.plugins.withId(GRADLE_PLUGIN_ID) {
+        plugins.withId(GRADLE_PLUGIN_ID) {
             configureGradlePluginPublishing(subProject)
         }
-        mavenPublicationCreator.prepare(subProject, isRelease(subProject))
+        mavenPublicationCreator.prepare(subProject, isRelease)
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
                 val mainPublication = mavenPublicationCreator.create(subProject, publishing)
-                signPublication(subProject, mainPublication)
+                if (isRelease) {
+                    signPublication(subProject, mainPublication)
+                }
             }
         }
     }
@@ -208,9 +215,12 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         signing.sign(publication)
     }
 
+    private fun addSigningPlugin(plugins: PluginContainer) {
+        plugins.apply(SigningPlugin::class.java)
+    }
+
     private fun applySubprojectPlugins(plugins: PluginContainer) {
         plugins.apply(MavenPublishPlugin::class.java)
-        plugins.apply(SigningPlugin::class.java)
         plugins.apply(DokkaPlugin::class.java)
     }
 

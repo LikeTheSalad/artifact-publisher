@@ -1,10 +1,12 @@
 plugins {
     id 'java-gradle-plugin'
-    id 'org.jetbrains.kotlin.jvm' version '1.9.20'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.21'
     id 'maven-publish'
     id 'signing'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
 }
+
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 description = "Plugin that sets up android and java libraries mavenCentral publishing configurations"
 
@@ -19,8 +21,19 @@ configurations {
     compileOnly.extendsFrom(fatDependency)
 }
 
+def javaVersion = JavaVersion.VERSION_1_8
+def minKotlinVersion = "1.6"
+
+tasks.withType(KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = javaVersion.toString()
+        apiVersion = minKotlinVersion
+        languageVersion = minKotlinVersion
+    }
+}
+
 dependencies {
-    api 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
+    api 'org.jetbrains.dokka:dokka-gradle-plugin:1.8.10'
     implementation 'gradle.plugin.com.github.johnrengelman:shadow:7.1.2'
     implementation 'com.gradle.publish:plugin-publish-plugin:1.0.0'
     compileOnly "com.android.tools.build:gradle:7.4.0"
@@ -55,6 +68,8 @@ ext {
 }
 
 java {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
     withJavadocJar()
     withSourcesJar()
 }

@@ -70,7 +70,9 @@ nexusPublishing {
 
 publishing {
     publications {
-        pluginMaven(MavenPublication) {
+        likethesalad(MavenPublication) {
+            from components.java
+
             pom {
                 name = project.publicName
                 description = project.description
@@ -98,4 +100,8 @@ publishing {
             }
         }
     }
+}
+
+signing {
+    sign publishing.publications.likethesalad
 }

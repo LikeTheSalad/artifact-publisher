@@ -3,12 +3,19 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.21'
     id 'maven-publish'
     id 'signing'
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
     id 'com.gradle.plugin-publish' version '1.2.1'
 }
 
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 description = "Internal plugin for publishing LikeTheSalad Java and Android libs"
+ext {
+    publicName = "Artifact Publisher"
+    url = "https://github.com/LikeTheSalad/artifact-publisher"
+    vcsUrl = "https://github.com/LikeTheSalad/artifact-publisher.git"
+    issueTrackerUrl = "https://github.com/LikeTheSalad/artifact-publisher/issues"
+}
 
 repositories {
     mavenCentral()
@@ -35,12 +42,12 @@ dependencies {
 }
 
 gradlePlugin {
-    website.set("https://github.com/LikeTheSalad/artifact-publisher")
-    vcsUrl.set("https://github.com/LikeTheSalad/artifact-publisher.git")
+    website.set(project.url)
+    vcsUrl.set(project.vcsUrl)
     plugins {
         publisher {
             id = 'com.likethesalad.artifact-publisher'
-            displayName = 'Artifact Publisher'
+            displayName = project.publicName
             description = project.description
             tags.set(['publisher', "likethesalad"])
             implementationClass = 'com.likethesalad.tools.artifact.publisher.ArtifactPublisherPlugin'
@@ -53,4 +60,42 @@ java {
     targetCompatibility = javaVersion
     withJavadocJar()
     withSourcesJar()
+}
+
+nexusPublishing {
+    repositories {
+        sonatype()
+    }
+}
+
+publishing {
+    publications {
+        pluginMaven(MavenPublication) {
+            pom {
+                name = project.publicName
+                description = project.description
+                url = project.url
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'LikeTheSalad'
+                        name = 'Cesar Munoz'
+                        email = 'likethesalad@gmail.com'
+                    }
+                }
+                scm {
+                    url = project.url
+                    connection = project.vcsUrl
+                }
+                issueManagement {
+                    url = project.issueTrackerUrl
+                }
+            }
+        }
+    }
 }

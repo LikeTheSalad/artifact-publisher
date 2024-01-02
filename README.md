@@ -35,6 +35,8 @@ Command to publish:
 
 For publishing the artifact-publisher:
 
+To Maven Central:
+
 ```
-./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+./gradlew publishLikethesaladPublicationToSonatypeRepository closeAndReleaseSonatypeStagingRepository
 ```

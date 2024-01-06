@@ -43,19 +43,26 @@ class PomReader(pomFile: File) {
     }
 
     private fun parseDependency(item: Element): DependencyInfo {
-        val groupId = extractItemValue(item, "groupId")
-        val artifactId = extractItemValue(item, "artifactId")
-        val version = extractItemValue(item, "version")
+        val groupId = extractItemValue(item, "groupId")!!
+        val artifactId = extractItemValue(item, "artifactId")!!
+        val version = extractItemValue(item, "version")!!
         val scope = extractItemValue(item, "scope")
         return DependencyInfo(
             groupId,
             artifactId,
             version,
-            if (scope == "runtime") DependencyInfo.Scope.RUNTIME else DependencyInfo.Scope.COMPILE
+            parseScope(scope)
         )
     }
 
-    private fun extractItemValue(element: Element, itemName: String): String {
-        return element.getElementsByTagName(itemName).item(0).textContent
+    private fun parseScope(scope: String?): DependencyInfo.Scope {
+        if (scope == null) {
+            return DependencyInfo.Scope.RUNTIME
+        }
+        return if (scope == "runtime") DependencyInfo.Scope.RUNTIME else DependencyInfo.Scope.COMPILE
+    }
+
+    private fun extractItemValue(element: Element, itemName: String): String? {
+        return element.getElementsByTagName(itemName).item(0)?.textContent
     }
 }

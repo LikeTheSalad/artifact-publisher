@@ -6,20 +6,27 @@ import com.gradle.publish.PluginBundleExtension
 import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
+import com.likethesalad.tools.artifact.publisher.extensions.ShadowExtension
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
+import com.likethesalad.tools.artifact.publisher.tools.DependencyInfo
+import com.likethesalad.tools.artifact.publisher.tools.PomReader
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
 import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
 import org.gradle.plugin.devel.tasks.PluginUnderTestMetadata
 import org.gradle.plugins.signing.SigningExtension
@@ -64,6 +71,9 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         // For Java libraries
         plugins.withId("java-library") {
             configurePublishTarget(subProject, JarMavenPublicationCreator(extension))
+            val intransitiveConfiguration = createEmbeddedIntransitiveConfiguration(subProject)
+            configureEmbeddedDependencies(intransitiveConfiguration, subProject)
+            configureShadow(subProject, intransitiveConfiguration)
         }
 
         // For Android libraries
@@ -114,34 +124,48 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     }
 
     private fun configureGradlePluginPublishing(subProject: Project) {
-        val intransitiveConfiguration = createEmbeddedIntransitiveConfiguration(subProject)
+        configurePluginBundle(subProject)
+        configureGradlePluginExtension(subProject.extensions)
+    }
+
+    private fun configureEmbeddedDependencies(intransitiveConfiguration: Configuration, project: Project) {
         intransitiveConfiguration.allDependencies.whenObjectAdded {
             if (it is ProjectDependency) {
                 val embeddedProject = it.dependencyProject
                 embeddedProject.afterEvaluate {
                     embeddedProject.configurations.getByName("implementation").allDependencies.forEach { dep ->
-                        subProject.dependencies.add("implementation", dep)
+                        project.dependencies.add("implementation", dep)
                     }
                 }
                 val targetExtension = createTargetExtensionIfNeeded(embeddedProject)
                 log("Disabling plugin publishing for ${embeddedProject.name}")
                 targetExtension.disablePublishing.set(true)
+            } else if (it is ExternalDependency) {
+                val module = it.module
+                val result = project.dependencies.createArtifactResolutionQuery()
+                    .forModule(module.group, module.name, it.version)
+                    .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
+                    .execute()
+                result.resolvedComponents.forEach { component ->
+                    component.getArtifacts(MavenPomArtifact::class.java).forEach { artifact ->
+                        artifact as ResolvedArtifactResult
+                        val reader = PomReader(artifact.file)
+                        addDependencies(project, reader.getDependencies())
+                    }
+                }
             }
         }
-        addGradlePluginPlugins(subProject.plugins)
-        configurePluginBundle(subProject.extensions)
-        configureGradlePluginExtension(subProject.extensions)
-        configureShadowJar(subProject, intransitiveConfiguration)
-        configureShadowElements(subProject)
     }
 
-    private fun configureShadowElements(subProject: Project) {
-        subProject.configurations.getByName("shadowRuntimeElements")
-            .extendsFrom(subProject.configurations.getByName("runtimeElements"))
+    private fun addDependencies(project: Project, dependencies: List<DependencyInfo>) {
+        dependencies.forEach {
+            project.dependencies.add(it.scope.configurationName, it.getNotation())
+        }
     }
 
-    private fun configurePluginBundle(extensions: ExtensionContainer) {
-        val pluginBundle = extensions.getByType(PluginBundleExtension::class.java)
+    private fun configurePluginBundle(project: Project) {
+        project.plugins.apply(PublishPlugin::class.java)
+        val pluginBundle = project.extensions.getByType(PluginBundleExtension::class.java)
         pluginBundle.website = extension.url.get()
         pluginBundle.vcsUrl = extension.vcsUrl.get()
         pluginBundle.description = rootProject.description
@@ -155,17 +179,21 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
     }
 
-    private fun configureShadowJar(subProject: Project, intransitiveConfiguration: Configuration) {
-        subProject.tasks.withType(ShadowJar::class.java) { shadowJar ->
+    private fun configureShadow(project: Project, intransitiveConfiguration: Configuration) {
+        project.plugins.apply(ShadowPlugin::class.java)
+        val shadowExtension = project.extensions.create("shadowExtension", ShadowExtension::class.java)
+        project.tasks.withType(ShadowJar::class.java) { shadowJar ->
             shadowJar.archiveClassifier.set("")
             shadowJar.configurations = listOf(intransitiveConfiguration)
-            shadowJar.relocate("dagger", "${subProject.group}.dagger")
+            shadowJar.mustRunAfter("jar")
         }
-    }
-
-    private fun addGradlePluginPlugins(plugins: PluginContainer) {
-        plugins.apply(ShadowPlugin::class.java)
-        plugins.apply(PublishPlugin::class.java)
+        project.afterEvaluate {
+            project.tasks.withType(ShadowJar::class.java) { shadowJar ->
+                shadowExtension.relocations.forEach {
+                    shadowJar.relocate(it.pattern.get(), it.destination.get())
+                }
+            }
+        }
     }
 
     private fun createEmbeddedIntransitiveConfiguration(subProject: Project): Configuration {

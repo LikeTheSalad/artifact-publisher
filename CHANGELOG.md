@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+Version 3.0.0 *(06-01-2024)*
+---
+
+* Removing automatic dagger remapping
+* Configuring shadow for all jars
+* Adding embedded transitive dependencies to the host project
+
 Version 2.0.0 *(29-12-2023)*
 ---
 

@@ -9,17 +9,23 @@ import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTar
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
+import com.likethesalad.tools.artifact.publisher.tools.DependencyInfo
+import com.likethesalad.tools.artifact.publisher.tools.PomReader
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.maven.MavenModule
+import org.gradle.maven.MavenPomArtifact
 import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
 import org.gradle.plugin.devel.tasks.PluginUnderTestMetadata
 import org.gradle.plugins.signing.SigningExtension
@@ -126,6 +132,19 @@ class ArtifactPublisherPlugin : Plugin<Project> {
                 val targetExtension = createTargetExtensionIfNeeded(embeddedProject)
                 log("Disabling plugin publishing for ${embeddedProject.name}")
                 targetExtension.disablePublishing.set(true)
+            } else if (it is ExternalDependency) {
+                val module = it.module
+                val result = subProject.dependencies.createArtifactResolutionQuery()
+                    .forModule(module.group, module.name, it.version)
+                    .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
+                    .execute()
+                result.resolvedComponents.forEach { component ->
+                    component.getArtifacts(MavenPomArtifact::class.java).forEach { artifact ->
+                        artifact as ResolvedArtifactResult
+                        val reader = PomReader(artifact.file)
+                        addDependencies(subProject, reader.getDependencies())
+                    }
+                }
             }
         }
         addGradlePluginPlugins(subProject.plugins)
@@ -133,6 +152,12 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         configureGradlePluginExtension(subProject.extensions)
         configureShadowJar(subProject, intransitiveConfiguration)
         configureShadowElements(subProject)
+    }
+
+    private fun addDependencies(project: Project, dependencies: List<DependencyInfo>) {
+        dependencies.forEach {
+            project.dependencies.add(it.scope.configurationName, it.getNotation())
+        }
     }
 
     private fun configureShadowElements(subProject: Project) {

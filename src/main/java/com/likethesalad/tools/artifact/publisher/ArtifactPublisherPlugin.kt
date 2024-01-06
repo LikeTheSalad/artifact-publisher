@@ -6,6 +6,7 @@ import com.gradle.publish.PluginBundleExtension
 import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
+import com.likethesalad.tools.artifact.publisher.extensions.ShadowExtension
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
@@ -150,7 +151,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         addGradlePluginPlugins(subProject.plugins)
         configurePluginBundle(subProject.extensions)
         configureGradlePluginExtension(subProject.extensions)
-        configureShadowJar(subProject, intransitiveConfiguration)
+        configureShadow(subProject, intransitiveConfiguration)
         configureShadowElements(subProject)
     }
 
@@ -180,11 +181,18 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
     }
 
-    private fun configureShadowJar(subProject: Project, intransitiveConfiguration: Configuration) {
-        subProject.tasks.withType(ShadowJar::class.java) { shadowJar ->
+    private fun configureShadow(project: Project, intransitiveConfiguration: Configuration) {
+        val shadowExtension = project.extensions.create("shadowExtension", ShadowExtension::class.java)
+        project.tasks.withType(ShadowJar::class.java) { shadowJar ->
             shadowJar.archiveClassifier.set("")
             shadowJar.configurations = listOf(intransitiveConfiguration)
-            shadowJar.relocate("dagger", "${subProject.group}.dagger")
+        }
+        project.afterEvaluate {
+            project.tasks.withType(ShadowJar::class.java) { shadowJar ->
+                shadowExtension.relocations.forEach {
+                    shadowJar.relocate(it.pattern.get(), it.destination.get())
+                }
+            }
         }
     }
 

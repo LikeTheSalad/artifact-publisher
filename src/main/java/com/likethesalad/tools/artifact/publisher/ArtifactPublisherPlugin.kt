@@ -67,39 +67,41 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun configureSubproject(subProject: Project) {
         val plugins = subProject.plugins
+        val isRelease = isRelease(subProject)
 
         // For Java libraries
         plugins.withId("java-library") {
-            configurePublishTarget(subProject, JarMavenPublicationCreator(extension))
+            configurePublishTarget(isRelease, subProject, JarMavenPublicationCreator(extension))
             val intransitiveConfiguration = createEmbeddedIntransitiveConfiguration(subProject)
             configureEmbeddedDependencies(intransitiveConfiguration, subProject)
             configureShadow(subProject, intransitiveConfiguration)
+            plugins.withId(GRADLE_PLUGIN_ID) {
+                configureShadowElements(subProject)
+                if (isRelease) {
+                    configureGradlePluginPublishing(subProject)
+                }
+            }
         }
 
         // For Android libraries
         plugins.withId("com.android.library") {
-            configurePublishTarget(subProject, AarMavenPublicationCreator(extension))
+            configurePublishTarget(isRelease, subProject, AarMavenPublicationCreator(extension))
         }
     }
 
     private fun configurePublishTarget(
+        isRelease: Boolean,
         subProject: Project,
         mavenPublicationCreator: MavenPublicationCreator
     ) {
         val plugins = subProject.plugins
         applySubprojectPlugins(plugins)
-        val isRelease = isRelease(subProject)
         if (isRelease) {
             addSigningPlugin(plugins)
         }
         setPropertiesFromExtension(subProject)
         val publishing = subProject.extensions.getByType(PublishingExtension::class.java)
         val targetExtension = createTargetExtensionIfNeeded(subProject)
-        plugins.withId(GRADLE_PLUGIN_ID) {
-            if (isRelease) {
-                configureGradlePluginPublishing(subProject)
-            }
-        }
         mavenPublicationCreator.prepare(subProject, isRelease)
         subProject.afterEvaluate {
             if (!targetExtension.disablePublishing.get()) {
@@ -196,6 +198,11 @@ class ArtifactPublisherPlugin : Plugin<Project> {
                 }
             }
         }
+    }
+
+    private fun configureShadowElements(project: Project) {
+        project.configurations.getByName("shadowRuntimeElements")
+            .extendsFrom(project.configurations.getByName("runtimeElements"))
     }
 
     private fun createEmbeddedIntransitiveConfiguration(subProject: Project): Configuration {

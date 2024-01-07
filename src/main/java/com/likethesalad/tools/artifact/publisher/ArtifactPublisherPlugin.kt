@@ -2,7 +2,6 @@ package com.likethesalad.tools.artifact.publisher
 
 import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import com.gradle.publish.PluginBundleExtension
 import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
@@ -20,7 +19,6 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ExternalDependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
-import org.gradle.api.plugins.ExtensionContainer
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -78,7 +76,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             plugins.withId(GRADLE_PLUGIN_ID) {
                 configureShadowElements(subProject)
                 if (isRelease) {
-                    configureGradlePluginPublishing(subProject)
+                    configureGradlePublishPlugin(subProject)
                 }
             }
         }
@@ -127,11 +125,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         )
     }
 
-    private fun configureGradlePluginPublishing(subProject: Project) {
-        configurePluginBundle(subProject)
-        configureGradlePluginExtension(subProject.extensions)
-    }
-
     private fun configureEmbeddedDependencies(intransitiveConfiguration: Configuration, project: Project) {
         intransitiveConfiguration.allDependencies.whenObjectAdded {
             if (it is ProjectDependency) {
@@ -167,19 +160,15 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
     }
 
-    private fun configurePluginBundle(project: Project) {
+    private fun configureGradlePublishPlugin(project: Project) {
         project.plugins.apply(PublishPlugin::class.java)
-        val pluginBundle = project.extensions.getByType(PluginBundleExtension::class.java)
-        pluginBundle.website = extension.url.get()
-        pluginBundle.vcsUrl = extension.vcsUrl.get()
-        pluginBundle.description = rootProject.description
-        pluginBundle.tags = extension.tags.get()
-    }
-
-    private fun configureGradlePluginExtension(extensions: ExtensionContainer) {
-        val gradlePluginExtension = extensions.getByType(GradlePluginDevelopmentExtension::class.java)
+        val gradlePluginExtension = project.extensions.getByType(GradlePluginDevelopmentExtension::class.java)
+        gradlePluginExtension.website.set(extension.url)
+        gradlePluginExtension.vcsUrl.set(extension.vcsUrl)
         gradlePluginExtension.plugins.whenObjectAdded {
             it.displayName = extension.displayName.get()
+            it.description = rootProject.description
+            it.tags.addAll(extension.tags.get())
         }
     }
 

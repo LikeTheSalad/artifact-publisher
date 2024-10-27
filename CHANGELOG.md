@@ -1,6 +1,11 @@
 Change Log
 ==========
 
+Version 3.1.0 *(07-01-2024)*
+---
+
+* Using gradle publish plugin new API
+
 Version 3.0.0 *(06-01-2024)*
 ---
 

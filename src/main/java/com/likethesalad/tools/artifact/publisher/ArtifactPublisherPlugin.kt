@@ -10,6 +10,7 @@ import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicatio
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.tasks.ChangelogUpdaterTask
+import com.likethesalad.tools.artifact.publisher.tasks.VersionBumpTask
 import com.likethesalad.tools.artifact.publisher.tools.DependencyInfo
 import com.likethesalad.tools.artifact.publisher.tools.PomReader
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
@@ -258,7 +259,11 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     }
 
     private fun configurePrePublishing(project: Project) {
-        project.tasks.register("updateChangelog", ChangelogUpdaterTask::class.java) {
+        project.tasks.register("changelogUpdate", ChangelogUpdaterTask::class.java) {
+            it.group = TASKS_GROUP
+            it.version.set(extension.version)
+        }
+        project.tasks.register("versionBump", VersionBumpTask::class.java) {
             it.group = TASKS_GROUP
             it.version.set(extension.version)
         }

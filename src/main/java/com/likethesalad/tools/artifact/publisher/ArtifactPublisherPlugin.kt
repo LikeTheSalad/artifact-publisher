@@ -143,7 +143,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             } else if (it is ExternalDependency) {
                 val module = it.module
                 val result = project.dependencies.createArtifactResolutionQuery()
-                    .forModule(module.group, module.name, it.version)
+                    .forModule(module.group, module.name, it.version!!)
                     .withArtifacts(MavenModule::class.java, MavenPomArtifact::class.java)
                     .execute()
                 result.resolvedComponents.forEach { component ->

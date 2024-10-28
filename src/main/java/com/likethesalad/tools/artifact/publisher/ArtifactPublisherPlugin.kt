@@ -9,6 +9,7 @@ import com.likethesalad.tools.artifact.publisher.extensions.ShadowExtension
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
+import com.likethesalad.tools.artifact.publisher.tasks.ChangelogUpdaterTask
 import com.likethesalad.tools.artifact.publisher.tools.DependencyInfo
 import com.likethesalad.tools.artifact.publisher.tools.PomReader
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
@@ -37,6 +38,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         private const val EXTENSION_ARTIFACT_PUBLISHER_NAME = "artifactPublisher"
         private const val EXTENSION_ARTIFACT_PUBLISHER_TARGET_NAME = "artifactPublisherTarget"
         private const val EMBEDDED_CLASSPATH_CONFIG_NAME = "embeddedClasspath"
+        private const val TASKS_GROUP = "publishing"
         const val GRADLE_PLUGIN_ID = "java-gradle-plugin"
     }
 
@@ -54,6 +56,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             configureSubproject(subProject)
         }
 
+        configurePrePublishing(project)
         configurePublishing(project)
     }
 
@@ -254,6 +257,13 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         plugins.apply(NexusPublishPlugin::class.java)
     }
 
+    private fun configurePrePublishing(project: Project) {
+        project.tasks.register("updateChangelog", ChangelogUpdaterTask::class.java) {
+            it.group = TASKS_GROUP
+            it.version.set(extension.version)
+        }
+    }
+
     private fun configurePublishing(project: Project) {
         val nexusPublishingExtension = project.extensions.getByType(NexusPublishExtension::class.java)
         nexusPublishingExtension.repositories {
@@ -278,7 +288,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
 
         tasks.register("publishToMavenCentral") {
-            it.group = "publishing"
+            it.group = TASKS_GROUP
             it.dependsOn(finishReleaseTask)
         }
     }

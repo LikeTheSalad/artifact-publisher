@@ -27,6 +27,11 @@ artifactPublisherTarget {
 }
 ```
 
+CI tasks:
+
+- `versionBump` to bump the minor version.
+- `changelogUpdate` to replace the "## Unreleased" part of a changelog.
+
 Command to publish:
 
 ```

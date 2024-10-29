@@ -16,6 +16,7 @@ artifactPublisher {
     url = "http://some.url"
     vcsUrl = "http://some.vcs.url"
     issueTrackerUrl = "http://some.issue.url"
+    tags = ["something"]
 }
 ```
 

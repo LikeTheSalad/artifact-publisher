@@ -242,6 +242,9 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun signPublication(project: Project, publication: MavenPublication) {
         val signing = project.extensions.getByType(SigningExtension::class.java)
+        if (System.getenv("CI") != null) {
+            signing.useInMemoryPgpKeys(System.getenv("GPG_PRIVATE_KEY"), System.getenv("GPG_PASSWORD"))
+        }
         signing.sign(publication)
     }
 

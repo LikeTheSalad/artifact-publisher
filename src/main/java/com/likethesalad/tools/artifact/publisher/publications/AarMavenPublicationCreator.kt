@@ -20,6 +20,7 @@ class AarMavenPublicationCreator(extension: ArtifactPublisherExtension) : MavenP
 
         publishing.javaClass.getMethod("singleVariant", String::class.java, Function1::class.java)
             .invoke(publishing, getComponentName(), variantConfig)
+        enableMavenCentralPublishing(project)
     }
 
     override fun getComponentName(): String {

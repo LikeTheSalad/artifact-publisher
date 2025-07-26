@@ -13,8 +13,7 @@ import com.likethesalad.tools.artifact.publisher.tasks.ChangelogUpdaterTask
 import com.likethesalad.tools.artifact.publisher.tasks.VersionBumpTask
 import com.likethesalad.tools.artifact.publisher.tools.DependencyInfo
 import com.likethesalad.tools.artifact.publisher.tools.PomReader
-import io.github.gradlenexus.publishplugin.NexusPublishExtension
-import io.github.gradlenexus.publishplugin.NexusPublishPlugin
+import com.vanniktech.maven.publish.MavenPublishBasePlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -49,7 +48,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         verifyRootProject(project)
         this.rootProject = project
-        applyRootProjectPlugins(project.plugins)
         extension = project.extensions.create(EXTENSION_ARTIFACT_PUBLISHER_NAME, ArtifactPublisherExtension::class.java)
         configureExtensionDefaults(project)
 
@@ -58,7 +56,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         }
 
         configurePrePublishing(project)
-        configurePublishing(project)
     }
 
     private fun configureExtensionDefaults(project: Project) {
@@ -254,11 +251,8 @@ class ArtifactPublisherPlugin : Plugin<Project> {
 
     private fun applySubprojectPlugins(plugins: PluginContainer) {
         plugins.apply(MavenPublishPlugin::class.java)
+        plugins.apply(MavenPublishBasePlugin::class.java)
         plugins.apply(DokkaPlugin::class.java)
-    }
-
-    private fun applyRootProjectPlugins(plugins: PluginContainer) {
-        plugins.apply(NexusPublishPlugin::class.java)
     }
 
     private fun configurePrePublishing(project: Project) {
@@ -269,35 +263,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         project.tasks.register("versionBump", VersionBumpTask::class.java) {
             it.group = TASKS_GROUP
             it.version.set(extension.version)
-        }
-    }
-
-    private fun configurePublishing(project: Project) {
-        val nexusPublishingExtension = project.extensions.getByType(NexusPublishExtension::class.java)
-        nexusPublishingExtension.repositories {
-            it.sonatype()
-        }
-        createPublishingTask(project)
-    }
-
-    private fun createPublishingTask(project: Project) {
-        val tasks = project.tasks
-        val finishReleaseTask = tasks.named("closeAndReleaseSonatypeStagingRepository")
-        val closeTask = tasks.named("closeSonatypeStagingRepository")
-
-        project.subprojects { subProject ->
-            subProject.tasks.whenTaskAdded { subProjectTask ->
-                if (subProjectTask.name == "publishLikethesaladPublicationToSonatypeRepository") {
-                    closeTask.configure {
-                        it.dependsOn(subProjectTask)
-                    }
-                }
-            }
-        }
-
-        tasks.register("publishToMavenCentral") {
-            it.group = TASKS_GROUP
-            it.dependsOn(finishReleaseTask)
         }
     }
 

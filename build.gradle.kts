@@ -45,7 +45,7 @@ kotlin {
 
 dependencies {
     api("org.jetbrains.dokka:dokka-gradle-plugin:1.8.10")
-    implementation("gradle.plugin.com.github.johnrengelman:shadow:8.1.1")
+    implementation("com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.8")
     implementation("com.gradle.publish:plugin-publish-plugin:1.3.1")
     implementation("com.vanniktech:gradle-maven-publish-plugin:0.34.0")
 }

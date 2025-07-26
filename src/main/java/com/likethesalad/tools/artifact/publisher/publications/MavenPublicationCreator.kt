@@ -1,14 +1,19 @@
 package com.likethesalad.tools.artifact.publisher.publications
 
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.gradle.api.Project
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 
 abstract class MavenPublicationCreator(private val extension: ArtifactPublisherExtension) {
 
+    companion object {
+        private const val PUBLICATION_NAME = "likethesalad"
+    }
+
     fun create(project: Project, publishing: PublishingExtension): MavenPublication {
-        return publishing.publications.create("likethesalad", MavenPublication::class.java) { publication ->
+        return publishing.publications.create(PUBLICATION_NAME, MavenPublication::class.java) { publication ->
             publication.from(project.components.getByName(getComponentName()))
             configureCommonPublicationParams(publication)
         }
@@ -17,6 +22,11 @@ abstract class MavenPublicationCreator(private val extension: ArtifactPublisherE
     abstract fun prepare(project: Project, isRelease: Boolean)
 
     abstract fun getComponentName(): String
+
+    protected fun enableMavenCentralPublishing(subProject: Project) {
+        val extension = subProject.extensions.getByType(MavenPublishBaseExtension::class.java)
+        extension.publishToMavenCentral(true)
+    }
 
     private fun configureCommonPublicationParams(publication: MavenPublication) {
         publication.groupId = getGroup()

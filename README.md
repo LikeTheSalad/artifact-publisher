@@ -44,5 +44,5 @@ For publishing the artifact-publisher:
 To Maven Central:
 
 ```
-./gradlew publishLikethesaladPublicationToSonatypeRepository closeAndReleaseSonatypeStagingRepository
+./gradlew publishLikethesaladPublicationToMavenCentralRepository
 ```

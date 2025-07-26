@@ -15,6 +15,7 @@ class JarMavenPublicationCreator(extension: ArtifactPublisherExtension) : MavenP
                         it.withSourcesJar()
                         it.withJavadocJar()
                     }
+                    enableMavenCentralPublishing(project)
                 }
             }
         }

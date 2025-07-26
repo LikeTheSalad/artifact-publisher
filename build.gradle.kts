@@ -6,7 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "2.2.0"
     id("maven-publish")
     id("signing")
-    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
+    id("com.vanniktech.maven.publish.base") version "0.34.0"
     id("com.gradle.plugin-publish") version "1.2.1"
 }
 
@@ -71,10 +71,8 @@ java {
     withSourcesJar()
 }
 
-nexusPublishing {
-    repositories {
-        sonatype()
-    }
+mavenPublishing {
+    publishToMavenCentral(true)
 }
 
 publishing {

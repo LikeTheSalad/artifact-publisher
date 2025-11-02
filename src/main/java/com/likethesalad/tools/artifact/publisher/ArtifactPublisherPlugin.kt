@@ -1,11 +1,8 @@
 package com.likethesalad.tools.artifact.publisher
 
-import com.github.jengelman.gradle.plugins.shadow.ShadowPlugin
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.gradle.publish.PublishPlugin
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherExtension
 import com.likethesalad.tools.artifact.publisher.extensions.ArtifactPublisherTargetExtension
-import com.likethesalad.tools.artifact.publisher.extensions.ShadowExtension
 import com.likethesalad.tools.artifact.publisher.publications.AarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.JarMavenPublicationCreator
 import com.likethesalad.tools.artifact.publisher.publications.MavenPublicationCreator
@@ -27,7 +24,6 @@ import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.maven.MavenModule
 import org.gradle.maven.MavenPomArtifact
 import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
-import org.gradle.plugin.devel.tasks.PluginUnderTestMetadata
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
@@ -71,11 +67,7 @@ class ArtifactPublisherPlugin : Plugin<Project> {
         // For Java libraries
         plugins.withId("java-library") {
             configurePublishTarget(isRelease, subProject, JarMavenPublicationCreator(extension))
-            val intransitiveConfiguration = createEmbeddedIntransitiveConfiguration(subProject)
-            configureEmbeddedDependencies(intransitiveConfiguration, subProject)
-            configureShadow(subProject, intransitiveConfiguration)
             plugins.withId(GRADLE_PLUGIN_ID) {
-                configureShadowElements(subProject)
                 if (isRelease) {
                     configureGradlePublishPlugin(subProject)
                 }
@@ -171,59 +163,6 @@ class ArtifactPublisherPlugin : Plugin<Project> {
             it.description = rootProject.description
             it.tags.addAll(extension.tags.get())
         }
-    }
-
-    private fun configureShadow(project: Project, intransitiveConfiguration: Configuration) {
-        project.plugins.apply(ShadowPlugin::class.java)
-        val shadowExtension = project.extensions.create("shadowExtension", ShadowExtension::class.java)
-        project.tasks.withType(ShadowJar::class.java) { shadowJar ->
-            shadowJar.archiveClassifier.set("")
-            shadowJar.configurations = listOf(intransitiveConfiguration)
-            shadowJar.mustRunAfter("jar")
-        }
-        project.afterEvaluate {
-            project.tasks.withType(ShadowJar::class.java) { shadowJar ->
-                shadowExtension.relocations.forEach {
-                    shadowJar.relocate(it.pattern.get(), it.destination.get())
-                }
-            }
-        }
-    }
-
-    private fun configureShadowElements(project: Project) {
-        project.configurations.getByName("shadowRuntimeElements")
-            .extendsFrom(project.configurations.getByName("runtimeElements"))
-    }
-
-    private fun createEmbeddedIntransitiveConfiguration(subProject: Project): Configuration {
-        val configurations = subProject.configurations
-        val bucket = configurations.create("embedded")
-        bucket.isCanBeConsumed = false
-        bucket.isCanBeResolved = false
-        val classpath = configurations.create(EMBEDDED_CLASSPATH_CONFIG_NAME) {
-            it.isCanBeConsumed = false
-            it.isCanBeResolved = true
-            it.isTransitive = false
-            it.extendsFrom(bucket)
-        }
-        configurations.named("compileClasspath") {
-            it.extendsFrom(classpath)
-        }
-        val testClasspath = configurations.create("testEmbeddedClasspath") {
-            it.isCanBeResolved = true
-            it.isCanBeConsumed = false
-            it.extendsFrom(bucket)
-        }
-
-        configurations.named("testRuntimeClasspath") {
-            it.extendsFrom(testClasspath)
-        }
-
-        subProject.tasks.withType(PluginUnderTestMetadata::class.java) {
-            it.pluginClasspath.from(testClasspath)
-        }
-
-        return classpath
     }
 
     private fun setPropertiesFromExtension(subProject: Project) {
